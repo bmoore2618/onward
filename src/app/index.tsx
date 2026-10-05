@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import {
   CHECKLIST,
+  checklistFor,
   PROGRAM_LENGTH_DAYS,
   phaseForDay,
   type Session,
@@ -30,6 +31,9 @@ export default function TodayScreen() {
           <DoneView
             day={onward.lastRecord.day}
             checkedCount={Object.values(onward.lastRecord.checklist).filter(Boolean).length}
+            checklistTotal={
+              onward.lastRecord.sessionId === 'rest' ? CHECKLIST.length - 1 : CHECKLIST.length
+            }
             next={onward.session}
             onUndo={onward.undoToday}
           />
@@ -53,7 +57,7 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
       </ThemedText>
       <ThemedText style={styles.heading}>{session.title}</ThemedText>
       <ThemedText themeColor="textSecondary">
-        {phase ? `${phase.name} phase · ` : ''}about {session.minutes} min
+        {phase.name} phase · {session.length}
       </ThemedText>
 
       {onward.daysAway > 1 && (
@@ -72,6 +76,11 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
               <ThemedText type="small" themeColor="textSecondary">
                 {ex.prescription}
               </ThemedText>
+              {ex.alternate && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.alternate}>
+                  Swap: {ex.alternate}
+                </ThemedText>
+              )}
             </View>
             {ex.weighted && (
               <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
@@ -93,24 +102,34 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
             )}
           </View>
         ))}
-        {session.steps?.map((step, i) => (
+        {session.blocks?.map((block, i) => (
           <View
-            key={step}
-            style={[styles.exerciseRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
-            <ThemedText>{step}</ThemedText>
+            key={block.label}
+            style={[styles.blockRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              {block.label}
+            </ThemedText>
+            <ThemedText>{block.detail}</ThemedText>
           </View>
         ))}
       </View>
 
-      <ThemedText type="small" themeColor="textSecondary" style={styles.guidance}>
-        Effort: {session.effort}
-        {'\n'}
-        {session.note}
-      </ThemedText>
+      <View style={styles.guidance}>
+        {session.effort && (
+          <ThemedText type="small" themeColor="textSecondary">
+            Effort: {session.effort}
+          </ThemedText>
+        )}
+        {session.notes.map((note) => (
+          <ThemedText key={note} type="small" themeColor="textSecondary">
+            {note}
+          </ThemedText>
+        ))}
+      </View>
 
       <ThemedText style={styles.sectionTitle}>Today&apos;s checklist</ThemedText>
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-        {CHECKLIST.map((item, i) => {
+        {checklistFor(session).map((item, i) => {
           const checked = !!onward.checklist[item.id];
           return (
             <Pressable
@@ -154,11 +173,13 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
 function DoneView({
   day,
   checkedCount,
+  checklistTotal,
   next,
   onUndo,
 }: {
   day: number;
   checkedCount: number;
+  checklistTotal: number;
   next: Session;
   onUndo: () => void;
 }) {
@@ -172,7 +193,7 @@ function DoneView({
       </View>
       <ThemedText style={styles.heading}>Day {day} done.</ThemedText>
       <ThemedText themeColor="textSecondary" style={styles.centered}>
-        {checkedCount} of {CHECKLIST.length} checklist items. Onward.
+        {checkedCount} of {checklistTotal} checklist items. Onward.
       </ThemedText>
 
       <View style={[styles.card, styles.tomorrowCard, { backgroundColor: theme.backgroundElement }]}>
@@ -180,7 +201,7 @@ function DoneView({
           TOMORROW · DAY {nextDay}
         </ThemedText>
         <ThemedText style={styles.sectionTitle}>{next.title}</ThemedText>
-        <ThemedText themeColor="textSecondary">about {next.minutes} min</ThemedText>
+        <ThemedText themeColor="textSecondary">{next.length}</ThemedText>
       </View>
 
       <Pressable onPress={onUndo} hitSlop={12} accessibilityRole="button">
@@ -214,6 +235,8 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   exerciseText: { flex: 1 },
+  alternate: { fontStyle: 'italic' },
+  blockRow: { paddingVertical: Spacing.three, gap: Spacing.half },
   weightBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -224,7 +247,7 @@ const styles = StyleSheet.create({
     height: 44,
   },
   weightInput: { width: 44, fontSize: 18, fontWeight: 600, textAlign: 'right' },
-  guidance: { marginTop: Spacing.two },
+  guidance: { marginTop: Spacing.two, gap: Spacing.one },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 56 },
   checkCircle: {

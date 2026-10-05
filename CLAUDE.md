@@ -47,7 +47,8 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 
 ## Founder / first user (drives v1 workout content)
 - Former competitive CrossFit athlete returning after time off; has a past lumbar fusion (L5-S1). Goal: lose ~15–20 lb and rebuild a routine. Prefers simple strength and HIIT; doesn't need CrossFit-style programming.
-- Programming should include back-friendly exercise options and easy substitutions. Don't present anything as medical or rehab guidance.
+- The founder's back limitation is a special case, NOT the default. The base program is written for a general user; back-friendly swaps and notes are applied only when a profile lists the limitation (`lumbar-fusion` in `src/data/profile.ts`, applied in `src/data/program.ts`). Every exercise should still have an easy substitution. Don't present anything as medical or rehab guidance.
+- The founder's current plan is the "Rebuild" 75-day program (Day 1 = Sept 29, 2026), transcribed in `src/data/program.ts`.
 - **Home garage equipment:** rig with squat rack and pull-up bar; barbell and plates; landmine attachment; adjustable incline bench; dumbbell pairs 5–40 lb (5 lb steps), then 50, 60, 70, 80; single kettlebells ~10–70 lb; cable/pulley station using kettlebells as the stack (pushdowns, lat pulls, rows, curls); leg extension machine; bodyweight back extension; plyo box; 14 lb and 30 lb wall balls; Peloton bike; punching bag; yoga mat.
 
 ## App Store notes

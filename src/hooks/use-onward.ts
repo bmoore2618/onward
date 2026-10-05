@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppState as RNAppState } from 'react-native';
 
+import { PROFILE } from '@/data/profile';
 import { sessionForDay, type ChecklistId } from '@/data/program';
 import {
   INITIAL_STATE,
@@ -50,7 +51,7 @@ export function useOnward() {
   const lastRecord: DayRecord | undefined = state.completed[state.completed.length - 1];
   const doneToday = lastRecord?.date === today;
   const currentDay = state.startDay + state.completed.length;
-  const session = sessionForDay(currentDay);
+  const session = sessionForDay(currentDay, PROFILE);
   const draft =
     state.draft?.date === today ? state.draft : { date: today, checklist: {}, weights: {} };
   const daysAway = lastRecord && !doneToday ? daysBetween(lastRecord.date, today) : 0;
@@ -75,14 +76,14 @@ export function useOnward() {
       const d = prev.draft?.date === today ? prev.draft : { date: today, checklist: {}, weights: {} };
       const day = prev.startDay + prev.completed.length;
       const weights: Record<string, string> = {};
-      for (const ex of sessionForDay(day).exercises ?? []) {
+      for (const ex of sessionForDay(day, PROFILE).exercises ?? []) {
         const w = (d.weights[ex.id] ?? prev.lastWeights[ex.id] ?? '').trim();
         if (ex.weighted && w) weights[ex.id] = w;
       }
       const record: DayRecord = {
         day,
         date: today,
-        sessionId: sessionForDay(day).id,
+        sessionId: sessionForDay(day, PROFILE).id,
         checklist: d.checklist,
         weights,
       };
