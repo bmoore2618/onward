@@ -56,6 +56,12 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 - The name "Onward" still needs an App Store availability check; a subtitle (e.g. "Onward: Fitness Comeback") is the fallback.
 - Health-related claims draw extra review scrutiny: keep copy about fitness and habits, not treatment.
 
+## Built so far (v1)
+- Today tab: day number, session, per-exercise weights, swap any exercise (alternatives per slot in `src/data/program.ts`), checklist, Complete Day. Notes/cues per movement; `videoUrl` on a movement shows a "Watch demo" link (founder has a YouTube channel of demos to link up).
+- Progress tab: days completed, workout consistency, per-habit bars, calendar (green complete / soft green partial / gray rest), tap a day for details; past days' checklist chips are tappable to backfill or correct.
+- Local notifications: evening "Tomorrow: …" and morning "Day N: … is ready", rescheduled 14 days ahead on every app open (`src/data/notifications.ts`). Hours live in `settings` in storage; no UI for them yet.
+- Expo Go is for development only. A standalone build via EAS → TestFlight is stage 2 of the roadmap.
+
 ## Working rules for Claude
 - Keep changes small and testable; tell the founder how to see each change in Expo Go.
 - The founder is the product owner, not a programmer. Explain in plain language and avoid unnecessary jargon.

@@ -1,6 +1,9 @@
+import { openURL } from 'expo-linking';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import {
@@ -8,6 +11,7 @@ import {
   checklistFor,
   PROGRAM_LENGTH_DAYS,
   phaseForDay,
+  type Exercise,
   type Session,
 } from '@/data/program';
 import { useOnward } from '@/hooks/use-onward';
@@ -56,6 +60,7 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
   const theme = useTheme();
   const { currentDay, session } = onward;
   const phase = phaseForDay(currentDay);
+  const [swapping, setSwapping] = useState<Exercise | null>(null);
 
   return (
     <>
@@ -76,31 +81,47 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
         {session.exercises?.map((ex, i) => (
           <View
-            key={ex.id}
+            key={ex.slot}
             style={[styles.exerciseRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
-            <View style={styles.exerciseText}>
-              <ThemedText>{ex.name}</ThemedText>
+            <Pressable
+              style={styles.exerciseText}
+              onPress={() => setSwapping(ex)}
+              accessibilityRole="button"
+              accessibilityLabel={`${ex.movement.name}, tap to swap`}>
+              <ThemedText>{ex.movement.name}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {ex.prescription}
               </ThemedText>
-              {ex.alternate && (
-                <ThemedText type="small" themeColor="textSecondary" style={styles.alternate}>
-                  Swap: {ex.alternate}
+              {(ex.note ?? ex.movement.cue) && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+                  {ex.note ?? ex.movement.cue}
                 </ThemedText>
               )}
-            </View>
-            {ex.weighted && (
+              <View style={styles.exerciseLinks}>
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  Swap
+                </ThemedText>
+                {ex.movement.videoUrl && (
+                  <Pressable onPress={() => openURL(ex.movement.videoUrl!)} hitSlop={8} accessibilityRole="link">
+                    <ThemedText type="small" style={{ color: theme.accent }}>
+                      Watch demo
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
+            </Pressable>
+            {ex.movement.weighted && (
               <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
                 <TextInput
-                  value={onward.weightFor(ex.id)}
-                  onChangeText={(t) => onward.setWeight(ex.id, t)}
+                  value={onward.weightFor(ex.movement.id)}
+                  onChangeText={(t) => onward.setWeight(ex.movement.id, t)}
                   placeholder="–"
                   placeholderTextColor={theme.textSecondary}
                   keyboardType="decimal-pad"
                   returnKeyType="done"
                   maxLength={5}
                   style={[styles.weightInput, { color: theme.text }]}
-                  accessibilityLabel={`${ex.name} weight in pounds`}
+                  accessibilityLabel={`${ex.movement.name} weight in pounds`}
                 />
                 <ThemedText type="small" themeColor="textSecondary">
                   lb
@@ -173,6 +194,15 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
       <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
         Partial days count. Whatever you got done, log it and keep going.
       </ThemedText>
+
+      <SwapPicker
+        exercise={swapping}
+        onPick={(movementId) => {
+          if (swapping) onward.setSwap(swapping.slot, movementId);
+          setSwapping(null);
+        }}
+        onClose={() => setSwapping(null)}
+      />
     </>
   );
 }
@@ -230,7 +260,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: {
     padding: Spacing.four,
-    paddingBottom: Spacing.six,
+    paddingBottom: Spacing.six * 2,
     gap: Spacing.two,
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -247,8 +277,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     minHeight: 64,
   },
-  exerciseText: { flex: 1 },
-  alternate: { fontStyle: 'italic' },
+  exerciseText: { flex: 1, gap: Spacing.half },
+  note: { fontStyle: 'italic' },
+  exerciseLinks: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.half },
   blockRow: { paddingVertical: Spacing.three, gap: Spacing.half },
   weightBox: {
     flexDirection: 'row',
