@@ -6,12 +6,14 @@ import { deletePhotoFile, pickPhoto, type Photo } from '@/data/photos';
 import type { Profile } from '@/data/profile';
 import { sessionForDay, type ChecklistId, type Session } from '@/data/program';
 import {
+  addDays,
   daysBetween,
   INITIAL_STATE,
   loadState,
   saveState,
   todayKey,
   type AppState,
+  type Checkin,
   type DayRecord,
 } from '@/data/storage';
 
@@ -35,6 +37,22 @@ export type DayView = {
   bodyWeight: string;
 };
 
+export type WeekSummary = {
+  /** 1-based week of the program */
+  week: number;
+  start: string;
+  end: string;
+  workoutsDone: number;
+  trainingDays: number;
+  /** Checklist items ticked / applicable, across the week so far */
+  habitsDone: number;
+  habitsTotal: number;
+  /** Change in body weight between the first and last weigh-in of the week, if two exist */
+  weightChange: number | null;
+  /** Average check-in (1–5), if any */
+  avgFeel: number | null;
+};
+
 type Onward = {
   loaded: boolean;
   today: string;
@@ -47,6 +65,14 @@ type Onward = {
   sessionFor: (day: number) => Session;
   viewDay: (date: string) => DayView;
   isWeighInDay: (date: string) => boolean;
+
+  checkinFor: (date: string) => Checkin;
+  setFeel: (date: string, feel: number | null) => void;
+  setNote: (date: string, note: string) => void;
+  /** Most recent logged weight for a movement before a date */
+  lastLift: (movementId: string, beforeDate: string) => { date: string; day: number; lb: string } | null;
+  /** Summary of the Monday–Sunday week containing a date */
+  weekSummary: (date: string) => WeekSummary;
 
   photos: Photo[];
   /** Opens the camera or library; resolves true if a photo was added */
@@ -166,6 +192,66 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
       sessionFor,
       viewDay,
       isWeighInDay: (date) => profile.weighInWeekdays.includes(new Date(`${date}T00:00:00`).getDay()),
+
+      checkinFor: (date) => state.checkins[date] ?? {},
+
+      setFeel: (date, feel) =>
+        update((prev) => ({
+          ...prev,
+          checkins: { ...prev.checkins, [date]: { ...prev.checkins[date], feel: feel ?? undefined } },
+        })),
+
+      setNote: (date, note) =>
+        update((prev) => ({ ...prev, checkins: { ...prev.checkins, [date]: { ...prev.checkins[date], note } } })),
+
+      lastLift: (movementId, beforeDate) => {
+        for (let i = state.completed.length - 1; i >= 0; i--) {
+          const r = state.completed[i];
+          if (r.date >= beforeDate) continue;
+          const lb = r.weights[movementId];
+          if (lb) return { date: r.date, day: r.day, lb };
+        }
+        return null;
+      },
+
+      weekSummary: (date) => {
+        const day = programDayFor(date);
+        const weekStartDay = day - ((day - 1 + 7000) % 7);
+        const start = addDays(profile.programStartDate, weekStartDay - 1);
+        const end = addDays(start, 6);
+        const last = date < today ? date : today; // only count days that have happened
+        let workoutsDone = 0, trainingDays = 0, habitsDone = 0, habitsTotal = 0;
+        const feels: number[] = [];
+        const weights: number[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = addDays(start, i);
+          if (d > last) break;
+          const session = sessionFor(weekStartDay + i);
+          const record = recordFor(d);
+          const items = session.kind === 'rest' ? 4 : 5;
+          habitsTotal += items;
+          habitsDone += Object.values(record?.checklist ?? {}).filter(Boolean).length;
+          if (session.kind !== 'rest') {
+            trainingDays++;
+            if (record?.checklist.workout) workoutsDone++;
+          }
+          const f = state.checkins[d]?.feel;
+          if (f) feels.push(f);
+          const w = parseFloat(state.bodyWeight[d] ?? '');
+          if (Number.isFinite(w)) weights.push(w);
+        }
+        return {
+          week: Math.floor((weekStartDay - 1) / 7) + 1,
+          start,
+          end,
+          workoutsDone,
+          trainingDays,
+          habitsDone,
+          habitsTotal,
+          weightChange: weights.length >= 2 ? Math.round((weights[weights.length - 1] - weights[0]) * 10) / 10 : null,
+          avgFeel: feels.length ? Math.round((feels.reduce((a, b) => a + b, 0) / feels.length) * 10) / 10 : null,
+        };
+      },
 
       photos: state.photos,
 

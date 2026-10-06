@@ -34,7 +34,11 @@ export type AppState = {
   bodyWeight: Record<string, string>;
   /** Progress photos, oldest first. Image files live in the app's documents folder. */
   photos: Photo[];
+  /** Daily check-in by date: how the day felt (1–5) and a free note */
+  checkins: Record<string, Checkin>;
 };
+
+export type Checkin = { feel?: number; note?: string };
 
 export const INITIAL_STATE: AppState = {
   profile: DEFAULT_PROFILE,
@@ -44,6 +48,7 @@ export const INITIAL_STATE: AppState = {
   swaps: {},
   bodyWeight: {},
   photos: [],
+  checkins: {},
 };
 
 export async function loadState(): Promise<AppState> {

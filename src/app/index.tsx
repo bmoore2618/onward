@@ -4,8 +4,11 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CheckIn } from '@/components/check-in';
+import { RestTimer } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
+import { WeekSummary } from '@/components/week-summary';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { checklistFor, MOBILITY_VIDEO_URL, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, type Exercise } from '@/data/program';
 import { addDays, dateFromKey } from '@/data/storage';
@@ -101,6 +104,8 @@ export default function TodayScreen() {
               {phaseForDay(v.day).name} phase · {session.length}
             </ThemedText>
 
+            {session.kind === 'rest' && !v.isFuture && <WeekSummary date={viewDate} />}
+
             <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
               {session.exercises?.map((ex, i) => (
                 <View
@@ -116,6 +121,7 @@ export default function TodayScreen() {
                     <ThemedText type="small" themeColor="textSecondary">
                       {ex.prescription}
                     </ThemedText>
+                    {ex.movement.weighted && editable && <LastLift movementId={ex.movement.id} beforeDate={viewDate} />}
                     {(ex.note ?? ex.movement.cue) && (
                       <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
                         {ex.note ?? ex.movement.cue}
@@ -188,6 +194,8 @@ export default function TodayScreen() {
               ))}
             </View>
 
+            {editable && session.kind === 'strength' && <RestTimer />}
+
             {editable && (
               <>
                 <ThemedText style={styles.sectionTitle}>{onward.isWeighInDay(viewDate) ? 'Weigh-in day' : 'Weigh-in'}</ThemedText>
@@ -255,6 +263,9 @@ export default function TodayScreen() {
                   })}
                 </View>
 
+                <ThemedText style={styles.sectionTitle}>Check-in</ThemedText>
+                <CheckIn date={viewDate} />
+
                 {v.isToday && !v.record && (
                   <>
                     <Pressable
@@ -289,6 +300,17 @@ export default function TodayScreen() {
         />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** "Last: 70 lb (Day 8)" under a weighted exercise, or a first-time hint */
+function LastLift({ movementId, beforeDate }: { movementId: string; beforeDate: string }) {
+  const onward = useOnward();
+  const last = onward.lastLift(movementId, beforeDate);
+  return (
+    <ThemedText type="small" themeColor="textSecondary">
+      {last ? `Last: ${last.lb} lb (Day ${last.day})` : 'First time. Pick a weight that leaves 3–4 reps in the tank.'}
+    </ThemedText>
   );
 }
 

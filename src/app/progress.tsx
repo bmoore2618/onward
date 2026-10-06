@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FEEL_LABELS } from '@/components/check-in';
 import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
@@ -270,6 +271,19 @@ export default function ProgressScreen() {
                 Weigh-in: {selectedView.bodyWeight} lb
               </ThemedText>
             )}
+            {(() => {
+              const c = onward.checkinFor(selected);
+              return (
+                <>
+                  {c.feel && (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Felt: {c.feel}/5 · {FEEL_LABELS[c.feel]}
+                    </ThemedText>
+                  )}
+                  {c.note ? <ThemedText style={styles.noteText}>“{c.note}”</ThemedText> : null}
+                </>
+              );
+            })()}
 
             {selectedView.isFuture ? (
               <ThemedText themeColor="textSecondary">Coming up.</ThemedText>
@@ -418,6 +432,7 @@ const styles = StyleSheet.create({
   detailList: { gap: Spacing.one },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   detailName: { flex: 1 },
+  noteText: { fontStyle: 'italic' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, minHeight: 40, justifyContent: 'center' },
   openButton: { marginTop: Spacing.two, minHeight: 48, borderWidth: 1.5, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.three },
