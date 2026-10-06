@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -159,6 +160,9 @@ export default function ProgressScreen() {
             Set your goal weight on the Settings tab.
           </ThemedText>
         </View>
+
+        <ThemedText style={styles.sectionTitle}>Progress photos</ThemedText>
+        <ProgressPhotos />
 
         <ThemedText style={styles.sectionTitle}>Daily habits</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AppState as RNAppState } from 'react-native';
 
 import { syncNotifications } from '@/data/notifications';
+import { deletePhotoFile, pickPhoto, type Photo } from '@/data/photos';
 import type { Profile } from '@/data/profile';
 import { sessionForDay, type ChecklistId, type Session } from '@/data/program';
 import {
@@ -46,6 +47,11 @@ type Onward = {
   sessionFor: (day: number) => Session;
   viewDay: (date: string) => DayView;
   isWeighInDay: (date: string) => boolean;
+
+  photos: Photo[];
+  /** Opens the camera or library; resolves true if a photo was added */
+  addPhoto: (source: 'camera' | 'library') => Promise<boolean>;
+  removePhoto: (id: string) => void;
 
   setProfile: (patch: Partial<Profile>) => void;
   setBodyWeight: (date: string, value: string) => void;
@@ -160,6 +166,22 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
       sessionFor,
       viewDay,
       isWeighInDay: (date) => profile.weighInWeekdays.includes(new Date(`${date}T00:00:00`).getDay()),
+
+      photos: state.photos,
+
+      addPhoto: async (source) => {
+        const photo = await pickPhoto(source);
+        if (!photo) return false;
+        update((prev) => ({ ...prev, photos: [...prev.photos, photo] }));
+        return true;
+      },
+
+      removePhoto: (id) =>
+        update((prev) => {
+          const photo = prev.photos.find((p) => p.id === id);
+          if (photo) deletePhotoFile(photo);
+          return { ...prev, photos: prev.photos.filter((p) => p.id !== id) };
+        }),
 
       setProfile: (patch) => update((prev) => ({ ...prev, profile: { ...prev.profile, ...patch } })),
 

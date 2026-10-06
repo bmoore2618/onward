@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { Photo } from '@/data/photos';
 import { DEFAULT_PROFILE, type Profile } from '@/data/profile';
 import type { ChecklistId, Swaps } from '@/data/program';
 
@@ -31,6 +32,8 @@ export type AppState = {
   swaps: Swaps;
   /** Weigh-ins, date (YYYY-MM-DD) → pounds exactly as typed, e.g. "212.4" */
   bodyWeight: Record<string, string>;
+  /** Progress photos, oldest first. Image files live in the app's documents folder. */
+  photos: Photo[];
 };
 
 export const INITIAL_STATE: AppState = {
@@ -40,6 +43,7 @@ export const INITIAL_STATE: AppState = {
   draft: null,
   swaps: {},
   bodyWeight: {},
+  photos: [],
 };
 
 export async function loadState(): Promise<AppState> {

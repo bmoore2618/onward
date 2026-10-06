@@ -26,6 +26,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Onward uses your photos for progress pictures you choose to add.",
+          "cameraPermission": "Onward uses the camera for progress pictures you choose to take."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
