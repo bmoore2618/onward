@@ -55,9 +55,17 @@ export async function loadState(): Promise<AppState> {
     settings?: { notificationsEnabled?: boolean; eveningHour?: number; morningHour?: number };
   };
   const { goalWeight, settings, ...rest } = saved;
+  // Checklist items were renamed: "protein" became "meals"; "water" was dropped
+  const migrate = (c: Record<string, boolean | undefined> | undefined): Checklist => {
+    if (!c) return {};
+    const { protein, water: _water, ...keep } = c;
+    return { ...keep, ...(protein !== undefined && keep.meals === undefined ? { meals: protein } : {}) } as Checklist;
+  };
   return {
     ...INITIAL_STATE,
     ...rest,
+    completed: (rest.completed ?? []).map((r) => ({ ...r, checklist: migrate(r.checklist) })),
+    draft: rest.draft ? { ...rest.draft, checklist: migrate(rest.draft.checklist) } : null,
     profile: {
       ...DEFAULT_PROFILE,
       ...(goalWeight ? { goalWeight } : {}),

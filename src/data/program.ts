@@ -410,10 +410,13 @@ export function sessionForDay(day: number, profile: Profile, swaps: Swaps = {}):
 export const CHECKLIST = [
   { id: 'workout', label: 'Workout' },
   { id: 'steps', label: '8,000 steps' },
-  { id: 'protein', label: 'Protein target' },
-  { id: 'water', label: 'Water' },
-  { id: 'sleep', label: 'Sleep' },
+  { id: 'meals', label: 'Followed meal plan' },
+  { id: 'sleep', label: '7+ hours sleep' },
+  { id: 'mobility', label: '10 min mobility' },
 ] as const;
+
+/** Stretch/mobility demos for the mobility habit */
+export const MOBILITY_VIDEO_URL = 'https://www.youtube.com/watch?v=FJDJ4mV2oK0';
 
 export type ChecklistId = (typeof CHECKLIST)[number]['id'];
 

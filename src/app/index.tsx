@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { checklistFor, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, type Exercise } from '@/data/program';
+import { checklistFor, MOBILITY_VIDEO_URL, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, type Exercise } from '@/data/program';
 import { addDays, dateFromKey } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
@@ -242,7 +242,14 @@ export default function TodayScreen() {
                           ]}>
                           {on && <ThemedText style={[styles.checkMark, { color: theme.accentText }]}>✓</ThemedText>}
                         </View>
-                        <ThemedText>{item.label}</ThemedText>
+                        <ThemedText style={styles.checkLabel}>{item.label}</ThemedText>
+                        {item.id === 'mobility' && (
+                          <Pressable onPress={() => openURL(MOBILITY_VIDEO_URL)} hitSlop={8} accessibilityRole="link">
+                            <ThemedText type="small" style={{ color: theme.accent }}>
+                              Stretch demo
+                            </ThemedText>
+                          </Pressable>
+                        )}
                       </Pressable>
                     );
                   })}
@@ -338,6 +345,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkLabel: { flex: 1 },
   checkMark: { fontSize: 16, lineHeight: 20, fontWeight: 700 },
   completeButton: {
     marginTop: Spacing.five,

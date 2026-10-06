@@ -30,7 +30,8 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 3. Make it scalable for thousands (backend, onboarding generator, subscriptions)
 
 ### v1 — current scope
-- **Today screen:** Day number, today's workout (exercises with sets × reps and weight), daily checklist (workout, 8,000 steps, protein, water, sleep), and a large Complete Day button.
+- **Today screen:** Day number, today's workout (exercises with sets × reps and weight), daily checklist, and a large Complete Day button.
+- **Daily habits (decided Oct 2026):** Workout, 8,000 steps, Followed meal plan (RP Diet Coach), 7+ hours sleep, 10 min mobility. Water was dropped as arbitrary. Keep the list at five; the app must not feel like 75 Hard. A 1–5 "how do you feel" check-in is a candidate for later (feeds adaptive coaching), not a checklist item.
 - Local storage of completed days and exercise weights used.
 - Evening reminder notification (e.g. 8 PM: "Tomorrow: Strength B, about 40 min") and a morning "today's session is ready" notification. This replaces the founder's current 8 PM Gmail workout email.
 
