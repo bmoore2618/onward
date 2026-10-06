@@ -35,6 +35,9 @@ export type AppState = {
   draft: { date: string; checklist: Checklist; weights: Weights } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;
+  /** Weigh-ins, date (YYYY-MM-DD) → pounds as typed, e.g. "212.4" */
+  bodyWeight: Record<string, string>;
+  goalWeight: string;
   settings: Settings;
 };
 
@@ -43,6 +46,8 @@ export const INITIAL_STATE: AppState = {
   lastWeights: {},
   draft: null,
   swaps: {},
+  bodyWeight: {},
+  goalWeight: '',
   settings: { notificationsEnabled: true, eveningHour: 20, morningHour: 7 },
 };
 

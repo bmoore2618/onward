@@ -5,6 +5,7 @@ import { syncNotifications } from '@/data/notifications';
 import { PROFILE } from '@/data/profile';
 import { sessionForDay, type ChecklistId, type Session } from '@/data/program';
 import {
+  dateFromKey,
   daysBetween,
   INITIAL_STATE,
   loadState,
@@ -35,6 +36,12 @@ type Onward = {
   lastRecord: DayRecord | undefined;
   daysAway: number;
   completed: DayRecord[];
+  /** Weigh-ins by date, oldest first */
+  bodyWeight: { date: string; lb: number }[];
+  goalWeight: string;
+  isWeighInDay: boolean;
+  setBodyWeight: (date: string, value: string) => void;
+  setGoalWeight: (value: string) => void;
   weightFor: (movementId: string) => string;
   toggleItem: (id: ChecklistId) => void;
   setWeight: (movementId: string, value: string) => void;
@@ -107,6 +114,23 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
       daysAway: lastRecord && !doneToday ? daysBetween(lastRecord.date, today) : 0,
       completed: state.completed,
       sessionFor,
+
+      bodyWeight: Object.entries(state.bodyWeight)
+        .map(([date, v]) => ({ date, lb: parseFloat(v) }))
+        .filter((e) => Number.isFinite(e.lb))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      goalWeight: state.goalWeight,
+      isWeighInDay: PROFILE.weighInWeekdays.includes(dateFromKey(today).getDay()),
+
+      setBodyWeight: (date, v) =>
+        update((prev) => {
+          const bodyWeight = { ...prev.bodyWeight };
+          if (v.trim()) bodyWeight[date] = v.trim();
+          else delete bodyWeight[date];
+          return { ...prev, bodyWeight };
+        }),
+
+      setGoalWeight: (v) => update((prev) => ({ ...prev, goalWeight: v.trim() })),
 
       weightFor: (movementId) => draft.weights[movementId] ?? state.lastWeights[movementId] ?? '',
 

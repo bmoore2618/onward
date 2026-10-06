@@ -15,9 +15,12 @@ export type Profile = {
    */
   programStartDate: string;
   limitations: Limitation[];
+  /** Weekdays with a weigh-in prompt on the Today screen (0 = Sunday … 6 = Saturday) */
+  weighInWeekdays: number[];
 };
 
 export const PROFILE: Profile = {
   programStartDate: '2026-09-28',
   limitations: ['lumbar-fusion'],
+  weighInWeekdays: [1, 4],
 };

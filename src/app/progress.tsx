@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { PROFILE } from '@/data/profile';
 import { CHECKLIST, checklistFor, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
@@ -67,6 +68,14 @@ export default function ProgressScreen() {
   const monthKey = todayKey(monthStart);
   const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
   const leadingBlanks = (monthStart.getDay() + 6) % 7; // Monday-first
+  // Rows of exactly seven cells; null = blank cell outside this month
+  const weeks: (number | null)[][] = [];
+  const cells: (number | null)[] = [
+    ...Array.from({ length: leadingBlanks }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7) cells.push(null);
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
   const statusFor = (date: string): DayStatus => {
     const day = programDayFor(date);
@@ -99,18 +108,71 @@ export default function ProgressScreen() {
     }
   };
 
+  const first = onward.bodyWeight[0];
+  const latest = onward.bodyWeight[onward.bodyWeight.length - 1];
+  const startWeight = first ? `${first.lb}` : '–';
+  const currentWeight = latest ? `${latest.lb}` : '–';
+  const change = first && latest ? Math.round((latest.lb - first.lb) * 10) / 10 : null;
+  const changeText = change === null ? '–' : change > 0 ? `+${change}` : `${change}`;
+  const todayWeight = onward.bodyWeight.find((e) => e.date === onward.today) ? `${onward.bodyWeight.find((e) => e.date === onward.today)!.lb}` : '';
+
   const selectedDay = selected ? programDayFor(selected) : null;
   const selectedRecord = selected ? byDate.get(selected) : undefined;
   const selectedSession = selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.sessionFor(selectedDay) : null;
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <ThemedText style={styles.heading}>Progress</ThemedText>
 
         <View style={styles.statRow}>
           <Stat label="Days completed" value={`${stats.daysCompleted}`} sub={`of ${PROGRAM_LENGTH_DAYS}`} />
           <Stat label="Workout consistency" value={`${stats.consistency}%`} sub="of training days" />
+        </View>
+
+        <ThemedText style={styles.sectionTitle}>Body weight</ThemedText>
+        <View style={[styles.card, styles.weightCard, { backgroundColor: theme.backgroundElement }]}>
+          <View style={styles.weightStats}>
+            <WeightStat label="Start" value={startWeight} />
+            <WeightStat label="Current" value={currentWeight} />
+            <WeightStat label="Change" value={changeText} />
+            <View style={styles.weightStat}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Goal
+              </ThemedText>
+              <TextInput
+                value={onward.goalWeight}
+                onChangeText={onward.setGoalWeight}
+                placeholder="–"
+                placeholderTextColor={theme.textSecondary}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                maxLength={5}
+                style={[styles.weightStatValue, styles.goalInput, { color: theme.text, borderColor: theme.border }]}
+                accessibilityLabel="Goal weight in pounds"
+              />
+            </View>
+          </View>
+          <WeightChart points={onward.bodyWeight} goal={parseFloat(onward.goalWeight) || undefined} />
+          <View style={[styles.logRow, { borderTopColor: theme.border }]}>
+            <ThemedText>Today&apos;s weigh-in</ThemedText>
+            <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
+              <TextInput
+                value={todayWeight}
+                onChangeText={(t) => onward.setBodyWeight(onward.today, t)}
+                placeholder="–"
+                placeholderTextColor={theme.textSecondary}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+                maxLength={5}
+                style={[styles.weightInput, { color: theme.text }]}
+                accessibilityLabel="Today's body weight in pounds"
+              />
+              <ThemedText type="small" themeColor="textSecondary">
+                lb
+              </ThemedText>
+            </View>
+          </View>
         </View>
 
         <ThemedText style={styles.sectionTitle}>Daily habits</ThemedText>
@@ -158,35 +220,35 @@ export default function ProgressScreen() {
               </ThemedText>
             ))}
           </View>
-          <View style={styles.grid}>
-            {Array.from({ length: leadingBlanks }).map((_, i) => (
-              <View key={`b${i}`} style={styles.cell} />
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const date = addDays(monthKey, i);
-              const status = statusFor(date);
-              const c = cellColors(status);
-              const isSelected = date === selected;
-              return (
-                <Pressable
-                  key={date}
-                  onPress={() => setSelected(date)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${date}, ${status}`}
-                  style={styles.cell}>
-                  <View
-                    style={[
-                      styles.cellInner,
-                      { backgroundColor: c.bg },
-                      c.border && { borderColor: c.border, borderWidth: 2 },
-                      isSelected && { borderColor: theme.text, borderWidth: 2 },
-                    ]}>
-                    <ThemedText style={[styles.cellText, { color: c.fg }]}>{i + 1}</ThemedText>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          {weeks.map((week, w) => (
+            <View key={w} style={styles.weekRow}>
+              {week.map((dayOfMonth, i) => {
+                if (dayOfMonth === null) return <View key={`b${i}`} style={styles.cell} />;
+                const date = addDays(monthKey, dayOfMonth - 1);
+                const status = statusFor(date);
+                const c = cellColors(status);
+                const isSelected = date === selected;
+                return (
+                  <Pressable
+                    key={date}
+                    onPress={() => setSelected(date)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${date}, ${status}`}
+                    style={styles.cell}>
+                    <View
+                      style={[
+                        styles.cellInner,
+                        { backgroundColor: c.bg },
+                        c.border && { borderColor: c.border, borderWidth: 2 },
+                        isSelected && { borderColor: theme.text, borderWidth: 2 },
+                      ]}>
+                      <ThemedText style={[styles.cellText, { color: c.fg }]}>{dayOfMonth}</ThemedText>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
           <View style={styles.legend}>
             <Legend color={theme.accent} label="Complete" />
             <Legend color={theme.accentSoft} label="Partial" />
@@ -278,6 +340,17 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
   );
 }
 
+function WeightStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.weightStat}>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+      <ThemedText style={styles.weightStatValue}>{value}</ThemedText>
+    </View>
+  );
+}
+
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <View style={styles.legendItem}>
@@ -308,6 +381,28 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   sectionTitleInline: { fontSize: 20, lineHeight: 28, fontWeight: 700 },
   card: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.three },
+  weightCard: { paddingVertical: Spacing.three, gap: Spacing.three },
+  weightStats: { flexDirection: 'row', justifyContent: 'space-between' },
+  weightStat: { flex: 1, gap: Spacing.half },
+  weightStatValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
+  goalInput: { borderBottomWidth: 1, minWidth: 56, paddingVertical: 0 },
+  logRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.three,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  weightBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: Spacing.two,
+    height: 44,
+  },
+  weightInput: { width: 56, fontSize: 18, fontWeight: 600, textAlign: 'right' },
   habitRow: { paddingVertical: Spacing.three, gap: Spacing.two },
   habitHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bar: { height: 8, borderRadius: 4, overflow: 'hidden' },
@@ -317,9 +412,8 @@ const styles = StyleSheet.create({
   monthArrow: { fontSize: 32, lineHeight: 36, paddingHorizontal: Spacing.three },
   calendar: { paddingVertical: Spacing.three, paddingHorizontal: Spacing.two },
   weekRow: { flexDirection: 'row' },
-  weekday: { width: `${100 / 7}%`, textAlign: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: Spacing.one },
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 3 },
+  weekday: { flex: 1, textAlign: 'center', marginBottom: Spacing.one },
+  cell: { flex: 1, aspectRatio: 1, padding: 3 },
   cellInner: { flex: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   cellText: { fontSize: 15, fontWeight: 600 },
   legend: { flexDirection: 'row', gap: Spacing.three, justifyContent: 'center', marginTop: Spacing.three },

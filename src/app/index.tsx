@@ -61,6 +61,8 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
   const { currentDay, session } = onward;
   const phase = phaseForDay(currentDay);
   const [swapping, setSwapping] = useState<Exercise | null>(null);
+  const todayEntry = onward.bodyWeight.find((e) => e.date === onward.today);
+  const todayWeight = todayEntry ? `${todayEntry.lb}` : '';
 
   return (
     <>
@@ -154,6 +156,38 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
           </ThemedText>
         ))}
       </View>
+
+      {onward.isWeighInDay && (
+        <>
+          <ThemedText style={styles.sectionTitle}>Weigh-in day</ThemedText>
+          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+            <View style={styles.exerciseRow}>
+              <View style={styles.exerciseText}>
+                <ThemedText>Morning weight</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Same time, same conditions each time.
+                </ThemedText>
+              </View>
+              <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                <TextInput
+                  value={todayWeight}
+                  onChangeText={(t) => onward.setBodyWeight(onward.today, t)}
+                  placeholder="–"
+                  placeholderTextColor={theme.textSecondary}
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  maxLength={5}
+                  style={[styles.weightInput, styles.bodyWeightInput, { color: theme.text }]}
+                  accessibilityLabel="Body weight in pounds"
+                />
+                <ThemedText type="small" themeColor="textSecondary">
+                  lb
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
 
       <ThemedText style={styles.sectionTitle}>Today&apos;s checklist</ThemedText>
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
@@ -291,6 +325,7 @@ const styles = StyleSheet.create({
     height: 44,
   },
   weightInput: { width: 44, fontSize: 18, fontWeight: 600, textAlign: 'right' },
+  bodyWeightInput: { width: 60 },
   guidance: { marginTop: Spacing.two, gap: Spacing.one },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 56 },
