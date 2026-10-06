@@ -27,14 +27,21 @@ export default function TodayScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets>
-        {onward.doneToday && onward.lastRecord ? (
+        {onward.currentDay > PROGRAM_LENGTH_DAYS ? (
+          <View style={styles.doneWrap}>
+            <ThemedText style={[styles.heading, styles.centered]}>All {PROGRAM_LENGTH_DAYS} days are behind you.</ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.centered}>
+              Your next program is coming. Keep moving in the meantime. Onward.
+            </ThemedText>
+          </View>
+        ) : onward.doneToday && onward.lastRecord ? (
           <DoneView
             day={onward.lastRecord.day}
             checkedCount={Object.values(onward.lastRecord.checklist).filter(Boolean).length}
             checklistTotal={
               onward.lastRecord.sessionId === 'rest' ? CHECKLIST.length - 1 : CHECKLIST.length
             }
-            next={onward.session}
+            next={onward.tomorrow}
             onUndo={onward.undoToday}
           />
         ) : (
@@ -62,7 +69,7 @@ function TodayView({ onward }: { onward: ReturnType<typeof useOnward> }) {
 
       {onward.daysAway > 1 && (
         <ThemedText themeColor="textSecondary" style={styles.welcomeBack}>
-          Welcome back. Picking up right where you left off.
+          Welcome back. Here&apos;s today&apos;s session.
         </ThemedText>
       )}
 
@@ -196,13 +203,19 @@ function DoneView({
         {checkedCount} of {checklistTotal} checklist items. Onward.
       </ThemedText>
 
-      <View style={[styles.card, styles.tomorrowCard, { backgroundColor: theme.backgroundElement }]}>
-        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
-          TOMORROW · DAY {nextDay}
+      {nextDay <= PROGRAM_LENGTH_DAYS ? (
+        <View style={[styles.card, styles.tomorrowCard, { backgroundColor: theme.backgroundElement }]}>
+          <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
+            TOMORROW · DAY {nextDay}
+          </ThemedText>
+          <ThemedText style={styles.sectionTitle}>{next.title}</ThemedText>
+          <ThemedText themeColor="textSecondary">{next.length}</ThemedText>
+        </View>
+      ) : (
+        <ThemedText themeColor="textSecondary" style={styles.centered}>
+          That&apos;s the full {PROGRAM_LENGTH_DAYS} days.
         </ThemedText>
-        <ThemedText style={styles.sectionTitle}>{next.title}</ThemedText>
-        <ThemedText themeColor="textSecondary">{next.length}</ThemedText>
-      </View>
+      )}
 
       <Pressable onPress={onUndo} hitSlop={12} accessibilityRole="button">
         <ThemedText type="small" themeColor="textSecondary" style={styles.undo}>

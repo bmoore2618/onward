@@ -18,11 +18,6 @@ export type DayRecord = {
 };
 
 export type AppState = {
-  /**
-   * Program day the app picked up from. Days 1–4 were done before the app
-   * existed (via the nightly emails), so it starts at Day 5.
-   */
-  startDay: number;
   completed: DayRecord[];
   /** Most recent weight used per exercise, to pre-fill next time */
   lastWeights: Weights;
@@ -31,7 +26,6 @@ export type AppState = {
 };
 
 export const INITIAL_STATE: AppState = {
-  startDay: 5,
   completed: [],
   lastWeights: {},
   draft: null,

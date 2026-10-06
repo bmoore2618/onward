@@ -17,9 +17,15 @@ function daysBetween(fromKey: string, toKey: string): number {
   return Math.round(ms / 86_400_000);
 }
 
+/** Program day for a calendar date: Day 1 is the profile's start date */
+function programDayFor(dateKey: string): number {
+  return daysBetween(PROFILE.programStartDate, dateKey) + 1;
+}
+
 /**
- * All of the Today screen's state. The program day only advances when a day
- * is completed, so a missed calendar day never skips or resets anything.
+ * All of the Today screen's state. The program follows the calendar, so
+ * today's session is always today's: a missed day is simply skipped, never
+ * made up or restarted.
  */
 export function useOnward() {
   const [state, setState] = useState<AppState>(INITIAL_STATE);
@@ -48,10 +54,11 @@ export function useOnward() {
     });
   }, []);
 
-  const lastRecord: DayRecord | undefined = state.completed[state.completed.length - 1];
-  const doneToday = lastRecord?.date === today;
-  const currentDay = state.startDay + state.completed.length;
+  const currentDay = programDayFor(today);
   const session = sessionForDay(currentDay, PROFILE);
+  const tomorrow = sessionForDay(currentDay + 1, PROFILE);
+  const lastRecord: DayRecord | undefined = state.completed[state.completed.length - 1];
+  const doneToday = lastRecord?.date === today && lastRecord.day === currentDay;
   const draft =
     state.draft?.date === today ? state.draft : { date: today, checklist: {}, weights: {} };
   const daysAway = lastRecord && !doneToday ? daysBetween(lastRecord.date, today) : 0;
@@ -74,22 +81,21 @@ export function useOnward() {
   const completeDay = () =>
     update((prev) => {
       const d = prev.draft?.date === today ? prev.draft : { date: today, checklist: {}, weights: {} };
-      const day = prev.startDay + prev.completed.length;
       const weights: Record<string, string> = {};
-      for (const ex of sessionForDay(day, PROFILE).exercises ?? []) {
+      for (const ex of session.exercises ?? []) {
         const w = (d.weights[ex.id] ?? prev.lastWeights[ex.id] ?? '').trim();
         if (ex.weighted && w) weights[ex.id] = w;
       }
       const record: DayRecord = {
-        day,
+        day: currentDay,
         date: today,
-        sessionId: sessionForDay(day, PROFILE).id,
+        sessionId: session.id,
         checklist: d.checklist,
         weights,
       };
       return {
         ...prev,
-        completed: [...prev.completed, record],
+        completed: [...prev.completed.filter((r) => r.date !== today), record],
         lastWeights: { ...prev.lastWeights, ...weights },
         draft: null,
       };
@@ -111,6 +117,7 @@ export function useOnward() {
     loaded,
     currentDay,
     session,
+    tomorrow,
     checklist: draft.checklist,
     doneToday,
     lastRecord,
