@@ -99,8 +99,42 @@ const M = {
 
 export type MovementId = keyof typeof M;
 
+/** Demo videos from the founder's "Movement Demos" YouTube playlist (video ids) */
+const VIDEOS: Partial<Record<MovementId, string>> = {
+  'goblet-squat': 'X8fHvkypjlU',
+  'db-front-squat': '7Fd44Bn-qiE',
+  'incline-db-bench': 'ckpA5p2Cf8k',
+  'barbell-bench': 'tSqBTEAXxtE',
+  'push-up': 'nqNf9st-KoU',
+  'ring-rows': '6Zyr9xVhZyE',
+  'chest-supported-row': 'X-uR6aY6j1E',
+  'single-arm-db-row': 'KtOAG48g3k8',
+  'bulgarian-split-squat': '97dyoLM28KE',
+  'reverse-lunge': '_LdzEz1Elas',
+  'walking-lunge': 'N296kWB3OYA',
+  'db-step-up': 'uPmXlK-4e8M',
+  'box-step-up': 'uPmXlK-4e8M',
+  'overhead-db-extension': '6nCKkTHPTnA',
+  'close-grip-push-up': 'j4C8w1j_jxQ',
+  'bird-dog': 'pVI-2GOqsPo',
+  'plank': 'z1hsA1NdiJ4',
+  'seated-db-press': 'sx90j_L-bZY',
+  'pull-up': 'NwcaL6Ze7Ag',
+  'single-arm-lat-pull': 'zTU1KGl6UnY',
+  'db-rdl': 'WNcY5dVv-20',
+  'glute-bridge': 'l_XGpxc1Bm4',
+  'single-leg-glute-bridge': 'X_G8mAcg_5c',
+  'db-curl': 'nLhAmq9j4Lo',
+  'hammer-curl': '4O8zsES45yI',
+  'lateral-raise': '7cFQd9XkC8Y',
+  'seated-lateral-raise': '7cFQd9XkC8Y',
+};
+
 export const MOVEMENTS: Record<MovementId, Movement> = Object.fromEntries(
-  Object.entries(M).map(([id, m]) => [id, { id, ...m }])
+  Object.entries(M).map(([id, m]) => {
+    const video = VIDEOS[id as MovementId];
+    return [id, { id, ...m, ...(video ? { videoUrl: `https://www.youtube.com/watch?v=${video}` } : {}) }];
+  })
 ) as Record<MovementId, Movement>;
 
 export function movement(id: string): Movement {

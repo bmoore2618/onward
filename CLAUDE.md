@@ -57,9 +57,10 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 - Health-related claims draw extra review scrutiny: keep copy about fitness and habits, not treatment.
 
 ## Built so far (v1)
-- Today tab: day number, session, per-exercise weights, swap any exercise (alternatives per slot in `src/data/program.ts`), checklist, Complete Day. Notes/cues per movement; `videoUrl` on a movement shows a "Watch demo" link (founder has a YouTube channel of demos to link up).
-- Progress tab: days completed, workout consistency, per-habit bars, calendar (green complete / soft green partial / gray rest), tap a day for details; past days' checklist chips are tappable to backfill or correct.
-- Local notifications: evening "Tomorrow: …" and morning "Day N: … is ready", rescheduled 14 days ahead on every app open (`src/data/notifications.ts`). Hours live in `settings` in storage; no UI for them yet.
+- Today tab: ‹ › arrows move between days. Today: session, weights, swaps, weigh-in, checklist, Complete Day. Past days: everything editable, saves as you go (edits go to that day's record; swaps on a past day apply to that day only, swaps on today apply going forward). Future days: preview only. "Watch demo" links come from the founder's YouTube "Movement Demos" playlist (`VIDEOS` in `src/data/program.ts`, ~30 of 204 videos matched so far).
+- Progress tab: days completed, workout consistency, body-weight chart with goal line, per-habit bars, calendar, tap a day for details / "Open this day" (routes to Today with `?date=`).
+- Settings tab: goal weight, Day 1 date, weigh-in weekdays, back-friendly toggle, notifications on/off and reminder hours. All of this is the `profile` in storage (`src/data/profile.ts` has the defaults).
+- Local notifications: evening "Tomorrow: …" and morning "Day N: … is ready", rescheduled 14 days ahead whenever the app opens or the profile changes (`src/data/notifications.ts`).
 - Expo Go is for development only. A standalone build via EAS → TestFlight is stage 2 of the roadmap.
 
 ## Working rules for Claude

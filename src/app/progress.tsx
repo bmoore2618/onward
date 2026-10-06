@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,10 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { PROFILE } from '@/data/profile';
 import { CHECKLIST, checklistFor, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
 import { addDays, dateFromKey, todayKey, type DayRecord } from '@/data/storage';
-import { programDayFor, useOnward } from '@/hooks/use-onward';
+import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -19,7 +19,7 @@ type DayStatus = 'future' | 'off-program' | 'full' | 'partial' | 'rest' | 'misse
 export default function ProgressScreen() {
   const theme = useTheme();
   const onward = useOnward();
-  const { sessionFor, completed, doneToday } = onward;
+  const { sessionFor, completed, programDayFor, profile, today } = onward;
   const [selected, setSelected] = useState<string | null>(null);
   const [monthOffset, setMonthOffset] = useState(0);
 
@@ -29,7 +29,9 @@ export default function ProgressScreen() {
     return map;
   }, [completed]);
 
-  const lastDay = Math.min(onward.currentDay, PROGRAM_LENGTH_DAYS);
+  const currentDay = programDayFor(today);
+  const doneToday = byDate.has(today);
+  const lastDay = Math.min(currentDay, PROGRAM_LENGTH_DAYS);
   // Days that have happened so far (today counts once it's completed)
   const elapsedDays = Math.max(0, doneToday ? lastDay : lastDay - 1);
 
@@ -39,7 +41,7 @@ export default function ProgressScreen() {
     let trainingDays = 0;
     let workoutsDone = 0;
     for (let day = 1; day <= elapsedDays; day++) {
-      const date = addDays(PROFILE.programStartDate, day - 1);
+      const date = addDays(profile.programStartDate, day - 1);
       const session = sessionFor(day);
       const record = byDate.get(date);
       for (const item of checklistFor(session)) {
@@ -52,18 +54,14 @@ export default function ProgressScreen() {
       }
     }
     return {
-      daysCompleted: completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS).length,
+      daysCompleted: completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && Object.values(r.checklist).some(Boolean)).length,
       consistency: trainingDays ? Math.round((workoutsDone / trainingDays) * 100) : 0,
-      items: CHECKLIST.map((item) => ({
-        ...item,
-        done: counts[item.id] ?? 0,
-        of: applicable[item.id] ?? 0,
-      })),
+      items: CHECKLIST.map((item) => ({ ...item, done: counts[item.id] ?? 0, of: applicable[item.id] ?? 0 })),
     };
-  }, [elapsedDays, byDate, completed, sessionFor]);
+  }, [elapsedDays, byDate, completed, sessionFor, profile.programStartDate]);
 
   // Calendar month to show
-  const base = dateFromKey(onward.today);
+  const base = dateFromKey(today);
   const monthStart = new Date(base.getFullYear(), base.getMonth() + monthOffset, 1);
   const monthKey = todayKey(monthStart);
   const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
@@ -80,14 +78,15 @@ export default function ProgressScreen() {
   const statusFor = (date: string): DayStatus => {
     const day = programDayFor(date);
     if (day < 1 || day > PROGRAM_LENGTH_DAYS) return 'off-program';
-    if (date === onward.today && !onward.doneToday) return 'today';
-    if (date > onward.today) return 'future';
-    const session = onward.sessionFor(day);
+    if (date === today && !doneToday) return 'today';
+    if (date > today) return 'future';
+    const session = sessionFor(day);
     const record = byDate.get(date);
-    if (!record) return session.kind === 'rest' ? 'rest' : 'missed';
+    if (session.kind === 'rest') return 'rest';
+    if (!record) return 'missed';
     const needed = checklistFor(session).length;
     const got = Object.values(record.checklist).filter(Boolean).length;
-    if (session.kind === 'rest') return 'rest';
+    if (got === 0) return 'missed';
     return got >= needed ? 'full' : 'partial';
   };
 
@@ -108,17 +107,15 @@ export default function ProgressScreen() {
     }
   };
 
+  // Body weight summary
   const first = onward.bodyWeight[0];
   const latest = onward.bodyWeight[onward.bodyWeight.length - 1];
-  const startWeight = first ? `${first.lb}` : '–';
-  const currentWeight = latest ? `${latest.lb}` : '–';
   const change = first && latest ? Math.round((latest.lb - first.lb) * 10) / 10 : null;
   const changeText = change === null ? '–' : change > 0 ? `+${change}` : `${change}`;
-  const todayWeight = onward.bodyWeight.find((e) => e.date === onward.today) ? `${onward.bodyWeight.find((e) => e.date === onward.today)!.lb}` : '';
+  const todayView = onward.viewDay(today);
 
   const selectedDay = selected ? programDayFor(selected) : null;
-  const selectedRecord = selected ? byDate.get(selected) : undefined;
-  const selectedSession = selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.sessionFor(selectedDay) : null;
+  const selectedView = selected && selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.viewDay(selected) : null;
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
@@ -133,38 +130,23 @@ export default function ProgressScreen() {
         <ThemedText style={styles.sectionTitle}>Body weight</ThemedText>
         <View style={[styles.card, styles.weightCard, { backgroundColor: theme.backgroundElement }]}>
           <View style={styles.weightStats}>
-            <WeightStat label="Start" value={startWeight} />
-            <WeightStat label="Current" value={currentWeight} />
+            <WeightStat label="Start" value={first ? `${first.lb}` : '–'} />
+            <WeightStat label="Current" value={latest ? `${latest.lb}` : '–'} />
             <WeightStat label="Change" value={changeText} />
-            <View style={styles.weightStat}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Goal
-              </ThemedText>
-              <TextInput
-                value={onward.goalWeight}
-                onChangeText={onward.setGoalWeight}
-                placeholder="–"
-                placeholderTextColor={theme.textSecondary}
-                keyboardType="decimal-pad"
-                returnKeyType="done"
-                maxLength={5}
-                style={[styles.weightStatValue, styles.goalInput, { color: theme.text, borderColor: theme.border }]}
-                accessibilityLabel="Goal weight in pounds"
-              />
-            </View>
+            <WeightStat label="Goal" value={profile.goalWeight || '–'} />
           </View>
-          <WeightChart points={onward.bodyWeight} goal={parseFloat(onward.goalWeight) || undefined} />
+          <WeightChart points={onward.bodyWeight} goal={parseFloat(profile.goalWeight) || undefined} />
           <View style={[styles.logRow, { borderTopColor: theme.border }]}>
             <ThemedText>Today&apos;s weigh-in</ThemedText>
             <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
               <TextInput
-                value={todayWeight}
-                onChangeText={(t) => onward.setBodyWeight(onward.today, t)}
+                value={todayView.bodyWeight}
+                onChangeText={(t) => onward.setBodyWeight(today, t)}
                 placeholder="–"
                 placeholderTextColor={theme.textSecondary}
                 keyboardType="decimal-pad"
                 returnKeyType="done"
-                maxLength={5}
+                maxLength={6}
                 style={[styles.weightInput, { color: theme.text }]}
                 accessibilityLabel="Today's body weight in pounds"
               />
@@ -173,6 +155,9 @@ export default function ProgressScreen() {
               </ThemedText>
             </View>
           </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            Set your goal weight on the Settings tab.
+          </ThemedText>
         </View>
 
         <ThemedText style={styles.sectionTitle}>Daily habits</ThemedText>
@@ -256,45 +241,50 @@ export default function ProgressScreen() {
           </View>
         </View>
 
-        {selected && selectedSession && (
+        {selected && selectedView && (
           <View style={[styles.card, styles.detail, { backgroundColor: theme.backgroundElement }]}>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
-              DAY {selectedDay} · {dateFromKey(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              DAY {selectedView.day} · {dateFromKey(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </ThemedText>
-            <ThemedText style={styles.detailTitle}>{selectedSession.title}</ThemedText>
+            <ThemedText style={styles.detailTitle}>{selectedView.session.title}</ThemedText>
 
-            {selectedRecord || (selected < onward.today && selectedSession.kind !== 'rest') ? (
+            {selectedView.record && selectedView.session.exercises && (
+              <View style={styles.detailList}>
+                {selectedView.session.exercises.map((ex) => {
+                  const w = selectedView.record!.weights[ex.movement.id];
+                  return (
+                    <View key={ex.slot} style={styles.detailRow}>
+                      <ThemedText style={styles.detailName}>{movement(ex.movement.id).name}</ThemedText>
+                      <ThemedText themeColor="textSecondary">{w ? `${w} lb` : '–'}</ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            {selectedView.bodyWeight !== '' && (
+              <ThemedText type="small" themeColor="textSecondary">
+                Weigh-in: {selectedView.bodyWeight} lb
+              </ThemedText>
+            )}
+
+            {selectedView.isFuture ? (
+              <ThemedText themeColor="textSecondary">Coming up.</ThemedText>
+            ) : (
               <>
-                {selectedRecord && selectedSession.exercises && (
-                  <View style={styles.detailList}>
-                    {selectedSession.exercises.map((ex) => {
-                      const doneId = selectedRecord.movements?.[ex.slot] ?? ex.movement.id;
-                      const w = selectedRecord.weights[doneId];
-                      return (
-                        <View key={ex.slot} style={styles.detailRow}>
-                          <ThemedText style={styles.detailName}>{movement(doneId).name}</ThemedText>
-                          <ThemedText themeColor="textSecondary">{w ? `${w} lb` : '–'}</ThemedText>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-                {!selectedRecord && (
+                {!selectedView.record && !selectedView.isToday && selectedView.session.kind !== 'rest' && (
                   <ThemedText type="small" themeColor="textSecondary">
                     Not logged. Tap what you did that day.
                   </ThemedText>
                 )}
                 <View style={styles.chips}>
-                  {checklistFor(selectedSession).map((item) => {
-                    const on = !!selectedRecord?.checklist[item.id];
-                    const editable = selected < onward.today;
+                  {checklistFor(selectedView.session).map((item) => {
+                    const on = !!selectedView.checklist[item.id];
                     return (
                       <Pressable
                         key={item.id}
-                        disabled={!editable}
-                        onPress={() => onward.togglePastItem(selected, item.id)}
+                        onPress={() => onward.toggleItem(selected, item.id)}
                         accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on, disabled: !editable }}
+                        accessibilityState={{ checked: on }}
                         style={({ pressed }) => [
                           styles.chip,
                           { backgroundColor: on ? theme.accent : theme.backgroundSelected },
@@ -309,15 +299,16 @@ export default function ProgressScreen() {
                   })}
                 </View>
               </>
-            ) : (
-              <ThemedText themeColor="textSecondary">
-                {selected > onward.today
-                  ? 'Coming up.'
-                  : selected === onward.today
-                    ? 'In progress. Log it from the Today tab.'
-                    : 'Rest day.'}
-              </ThemedText>
             )}
+
+            <Pressable
+              onPress={() => router.push({ pathname: '/', params: { date: selected } })}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.openButton, { borderColor: theme.accent }, pressed && { opacity: 0.6 }]}>
+              <ThemedText style={{ color: theme.accent, fontWeight: 600 }}>
+                {selectedView.isFuture ? 'Preview this day' : 'Open this day to edit weights and movements'}
+              </ThemedText>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -385,7 +376,6 @@ const styles = StyleSheet.create({
   weightStats: { flexDirection: 'row', justifyContent: 'space-between' },
   weightStat: { flex: 1, gap: Spacing.half },
   weightStatValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
-  goalInput: { borderBottomWidth: 1, minWidth: 56, paddingVertical: 0 },
   logRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -402,7 +392,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.two,
     height: 44,
   },
-  weightInput: { width: 56, fontSize: 18, fontWeight: 600, textAlign: 'right' },
+  weightInput: { width: 64, fontSize: 18, fontWeight: 600, textAlign: 'right' },
   habitRow: { paddingVertical: Spacing.three, gap: Spacing.two },
   habitHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bar: { height: 8, borderRadius: 4, overflow: 'hidden' },
@@ -426,4 +416,5 @@ const styles = StyleSheet.create({
   detailName: { flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, minHeight: 40, justifyContent: 'center' },
+  openButton: { marginTop: Spacing.two, minHeight: 48, borderWidth: 1.5, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.three },
 });

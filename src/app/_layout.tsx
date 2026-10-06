@@ -26,6 +26,10 @@ export default function RootLayout() {
             <NativeTabs.Trigger.Icon sf={{ default: 'calendar', selected: 'calendar' }} md="calendar_month" />
             <NativeTabs.Trigger.Label>Progress</NativeTabs.Trigger.Label>
           </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="settings">
+            <NativeTabs.Trigger.Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} md="settings" />
+            <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
+          </NativeTabs.Trigger>
         </NativeTabs>
       </OnwardProvider>
     </ThemeProvider>

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { DEFAULT_PROFILE, type Profile } from '@/data/profile';
 import type { ChecklistId, Swaps } from '@/data/program';
 
 const STORAGE_KEY = 'onward/state/v1';
@@ -10,7 +11,7 @@ export type Weights = Record<string, string>;
 
 export type DayRecord = {
   day: number;
-  /** Local calendar date the day was completed, YYYY-MM-DD */
+  /** Local calendar date of the day, YYYY-MM-DD */
   date: string;
   sessionId: string;
   checklist: Checklist;
@@ -19,15 +20,8 @@ export type DayRecord = {
   movements?: Record<string, string>;
 };
 
-export type Settings = {
-  notificationsEnabled: boolean;
-  /** Local hour (0–23) of the "tomorrow's workout" reminder */
-  eveningHour: number;
-  /** Local hour (0–23) of the "today's session is ready" reminder */
-  morningHour: number;
-};
-
 export type AppState = {
+  profile: Profile;
   completed: DayRecord[];
   /** Most recent weight used per movement, to pre-fill next time */
   lastWeights: Weights;
@@ -35,27 +29,38 @@ export type AppState = {
   draft: { date: string; checklist: Checklist; weights: Weights } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;
-  /** Weigh-ins, date (YYYY-MM-DD) → pounds as typed, e.g. "212.4" */
+  /** Weigh-ins, date (YYYY-MM-DD) → pounds exactly as typed, e.g. "212.4" */
   bodyWeight: Record<string, string>;
-  goalWeight: string;
-  settings: Settings;
 };
 
 export const INITIAL_STATE: AppState = {
+  profile: DEFAULT_PROFILE,
   completed: [],
   lastWeights: {},
   draft: null,
   swaps: {},
   bodyWeight: {},
-  goalWeight: '',
-  settings: { notificationsEnabled: true, eveningHour: 20, morningHour: 7 },
 };
 
 export async function loadState(): Promise<AppState> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return INITIAL_STATE;
-  const saved = JSON.parse(raw) as Partial<AppState>;
-  return { ...INITIAL_STATE, ...saved, settings: { ...INITIAL_STATE.settings, ...saved.settings } };
+  // Older saves kept these outside the profile
+  const saved = JSON.parse(raw) as Partial<AppState> & {
+    goalWeight?: string;
+    settings?: { notificationsEnabled?: boolean; eveningHour?: number; morningHour?: number };
+  };
+  const { goalWeight, settings, ...rest } = saved;
+  return {
+    ...INITIAL_STATE,
+    ...rest,
+    profile: {
+      ...DEFAULT_PROFILE,
+      ...(goalWeight ? { goalWeight } : {}),
+      ...settings,
+      ...saved.profile,
+    },
+  };
 }
 
 export async function saveState(state: AppState): Promise<void> {
@@ -72,6 +77,10 @@ export function todayKey(now = new Date()): string {
 /** Parse a YYYY-MM-DD key as local midnight */
 export function dateFromKey(key: string): Date {
   return new Date(`${key}T00:00:00`);
+}
+
+export function isValidDateKey(key: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) && !Number.isNaN(dateFromKey(key).getTime()) && todayKey(dateFromKey(key)) === key;
 }
 
 export function daysBetween(fromKey: string, toKey: string): number {

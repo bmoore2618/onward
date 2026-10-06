@@ -1,9 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { PROFILE } from '@/data/profile';
+import type { Profile } from '@/data/profile';
 import { PROGRAM_LENGTH_DAYS, sessionForDay, type Swaps } from '@/data/program';
-import { addDays, dateFromKey, daysBetween, todayKey, type Settings } from '@/data/storage';
+import { addDays, dateFromKey, daysBetween, todayKey } from '@/data/storage';
 
 /** How many days ahead to schedule. iOS allows 64 pending; 2 per day keeps us well under. */
 const DAYS_AHEAD = 14;
@@ -26,21 +26,17 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return next.granted;
 }
 
-function programDayFor(dateKey: string): number {
-  return daysBetween(PROFILE.programStartDate, dateKey) + 1;
-}
-
 /**
  * Replace all scheduled reminders with the next two weeks:
  *   evening (default 8 PM): "Tomorrow: Strength B, about 45 min"
  *   morning (default 7 AM): "Day 9: Peloton Conditioning is ready"
- * Called whenever the app opens so the schedule never runs dry.
+ * Called whenever the app opens or settings change, so the schedule never runs dry.
  */
-export async function syncNotifications(settings: Settings, swaps: Swaps): Promise<void> {
+export async function syncNotifications(profile: Profile, swaps: Swaps): Promise<void> {
   if (Platform.OS === 'web') return;
 
   await Notifications.cancelAllScheduledNotificationsAsync();
-  if (!settings.notificationsEnabled) return;
+  if (!profile.notificationsEnabled) return;
   if (!(await requestNotificationPermission())) return;
 
   const now = new Date();
@@ -48,13 +44,13 @@ export async function syncNotifications(settings: Settings, swaps: Swaps): Promi
 
   for (let i = 0; i < DAYS_AHEAD; i++) {
     const date = addDays(today, i);
-    const day = programDayFor(date);
+    const day = daysBetween(profile.programStartDate, date) + 1;
 
     // Morning: today's session
     if (day >= 1 && day <= PROGRAM_LENGTH_DAYS) {
-      const session = sessionForDay(day, PROFILE, swaps);
+      const session = sessionForDay(day, profile, swaps);
       const at = dateFromKey(date);
-      at.setHours(settings.morningHour, 0, 0, 0);
+      at.setHours(profile.morningHour, 0, 0, 0);
       if (at > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -72,9 +68,9 @@ export async function syncNotifications(settings: Settings, swaps: Swaps): Promi
     // Evening: tomorrow's session
     const tomorrowDay = day + 1;
     if (tomorrowDay >= 1 && tomorrowDay <= PROGRAM_LENGTH_DAYS) {
-      const next = sessionForDay(tomorrowDay, PROFILE, swaps);
+      const next = sessionForDay(tomorrowDay, profile, swaps);
       const at = dateFromKey(date);
-      at.setHours(settings.eveningHour, 0, 0, 0);
+      at.setHours(profile.eveningHour, 0, 0, 0);
       if (at > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
