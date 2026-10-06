@@ -99,7 +99,12 @@ const M = {
 
 export type MovementId = keyof typeof M;
 
-/** Demo videos from the founder's "Movement Demos" YouTube playlist (video ids) */
+/**
+ * Demo videos (YouTube video ids). Source of truth is the founder's
+ * "Movement Links" Google Sheet (see CLAUDE.md); a few come straight from
+ * the YouTube playlist where the sheet has no row yet. Missing entries are
+ * movements that haven't been filmed.
+ */
 const VIDEOS: Partial<Record<MovementId, string>> = {
   'goblet-squat': 'X8fHvkypjlU',
   'db-front-squat': '7Fd44Bn-qiE',
@@ -116,19 +121,26 @@ const VIDEOS: Partial<Record<MovementId, string>> = {
   'box-step-up': 'uPmXlK-4e8M',
   'overhead-db-extension': '6nCKkTHPTnA',
   'close-grip-push-up': 'j4C8w1j_jxQ',
+  'dead-bug': 'IDnvNIxHcKw',
   'bird-dog': 'pVI-2GOqsPo',
-  'plank': 'z1hsA1NdiJ4',
+  'plank': '1KpsLjqlA9o',
+  'side-plank': 'kHZ7OsM8nbk',
   'seated-db-press': 'sx90j_L-bZY',
-  'pull-up': 'NwcaL6Ze7Ag',
+  'half-kneeling-db-press': 'eOEU7Xdzwbo',
+  'pull-up': 'PmDUXZBBdLU',
   'single-arm-lat-pull': 'zTU1KGl6UnY',
   'db-rdl': 'WNcY5dVv-20',
-  'glute-bridge': 'l_XGpxc1Bm4',
+  'glute-bridge': 'UH5FslSOBdY',
   'single-leg-glute-bridge': 'X_G8mAcg_5c',
+  'back-extension': '4BUkXZDnBw8',
   'db-curl': 'nLhAmq9j4Lo',
   'hammer-curl': '4O8zsES45yI',
   'lateral-raise': '7cFQd9XkC8Y',
   'seated-lateral-raise': '7cFQd9XkC8Y',
 };
+
+/** Short explainer shown on rest days */
+export const REST_DAY_VIDEO_URL = 'https://www.youtube.com/watch?v=oMYyDYUrDi4';
 
 export const MOVEMENTS: Record<MovementId, Movement> = Object.fromEntries(
   Object.entries(M).map(([id, m]) => {

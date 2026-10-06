@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { checklistFor, PROGRAM_LENGTH_DAYS, phaseForDay, type Exercise } from '@/data/program';
+import { checklistFor, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, type Exercise } from '@/data/program';
 import { addDays, dateFromKey } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
@@ -169,6 +169,13 @@ export default function TodayScreen() {
             </View>
 
             <View style={styles.guidance}>
+              {session.kind === 'rest' && (
+                <Pressable onPress={() => openURL(REST_DAY_VIDEO_URL)} hitSlop={8} accessibilityRole="link">
+                  <ThemedText type="small" style={{ color: theme.accent }}>
+                    Watch: why rest days matter
+                  </ThemedText>
+                </Pressable>
+              )}
               {session.effort && (
                 <ThemedText type="small" themeColor="textSecondary">
                   Effort: {session.effort}
