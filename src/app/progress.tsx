@@ -8,7 +8,7 @@ import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { CHECKLIST, checklistFor, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
+import { CHECKLIST, checklistFor, dayCounts, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
 import { addDays, dateFromKey, todayKey, type DayRecord } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
@@ -55,12 +55,29 @@ export default function ProgressScreen() {
         if (record?.checklist.workout) workoutsDone++;
       }
     }
+    // Day-completion rule: planned session (or short version), or a rest day with 3+ habits
+    let daysCompleted = 0;
+    let goodWeeks = 0;
+    let weekWorkouts = 0;
+    for (let day = 1; day <= elapsedDays; day++) {
+      const date = addDays(profile.programStartDate, day - 1);
+      const session = sessionFor(day);
+      const record = byDate.get(date);
+      if (record && dayCounts(session, record.checklist)) daysCompleted++;
+      if (record?.checklist.workout) weekWorkouts++;
+      if (day % 7 === 0 || day === elapsedDays) {
+        if (weekWorkouts >= 2) goodWeeks++;
+        weekWorkouts = 0;
+      }
+    }
     return {
-      daysCompleted: completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && Object.values(r.checklist).some(Boolean)).length,
+      daysCompleted,
+      goodWeeks,
+      weeksSoFar: Math.ceil(elapsedDays / 7),
       consistency: trainingDays ? Math.round((workoutsDone / trainingDays) * 100) : 0,
       items: CHECKLIST.map((item) => ({ ...item, done: counts[item.id] ?? 0, of: applicable[item.id] ?? 0 })),
     };
-  }, [elapsedDays, byDate, completed, sessionFor, profile.programStartDate]);
+  }, [elapsedDays, byDate, sessionFor, profile.programStartDate]);
 
   // Calendar month to show
   const base = dateFromKey(today);
@@ -89,7 +106,7 @@ export default function ProgressScreen() {
     const needed = checklistFor(session).length;
     const got = Object.values(record.checklist).filter(Boolean).length;
     if (got === 0) return 'missed';
-    return got >= needed ? 'full' : 'partial';
+    return got >= needed || dayCounts(session, record.checklist) ? 'full' : 'partial';
   };
 
   const cellColors = (status: DayStatus) => {
@@ -125,8 +142,12 @@ export default function ProgressScreen() {
         <ThemedText style={styles.heading}>Progress</ThemedText>
 
         <View style={styles.statRow}>
-          <Stat label="Days completed" value={`${stats.daysCompleted}`} sub={`of ${PROGRAM_LENGTH_DAYS}`} />
+          <Stat label="Days completed" value={`${stats.daysCompleted}`} sub={`of ${elapsedDays} so far`} />
           <Stat label="Workout consistency" value={`${stats.consistency}%`} sub="of training days" />
+        </View>
+        <View style={styles.statRow}>
+          <Stat label="Weeks with 2+ sessions" value={`${stats.goodWeeks}`} sub={`of ${stats.weeksSoFar} so far`} />
+          <Stat label="Program" value={`Day ${Math.min(currentDay, PROGRAM_LENGTH_DAYS)}`} sub={`of ${PROGRAM_LENGTH_DAYS}`} />
         </View>
 
         <ThemedText style={styles.sectionTitle}>Body weight</ThemedText>
@@ -137,7 +158,12 @@ export default function ProgressScreen() {
             <WeightStat label="Change" value={changeText} />
             <WeightStat label="Goal" value={profile.goalWeight || '–'} />
           </View>
-          <WeightChart points={onward.bodyWeight} goal={parseFloat(profile.goalWeight) || undefined} />
+          <WeightChart points={onward.bodyWeight} goal={parseFloat(profile.goalWeight) || undefined} paceStart={first ? { date: first.date, lb: first.lb } : undefined} />
+          {first && (
+            <ThemedText type="small" themeColor="textSecondary">
+              The dotted line is a steady 0.75 lb a week. That pace is what the research calls realistic; the goal line shows where you’re headed.
+            </ThemedText>
+          )}
           <View style={[styles.logRow, { borderTopColor: theme.border }]}>
             <ThemedText>Today&apos;s weigh-in</ThemedText>
             <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
@@ -243,6 +269,11 @@ export default function ProgressScreen() {
             <Legend color={theme.accent} label="Complete" />
             <Legend color={theme.accentSoft} label="Partial" />
             <Legend color={theme.backgroundSelected} label="Rest" />
+          </View>
+          <View style={styles.legend}>
+            <ThemedText type="small" themeColor="textSecondary">
+              A day counts when you do the session (short version included) or tick 3+ habits on a rest day.
+            </ThemedText>
           </View>
         </View>
 

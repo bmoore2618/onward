@@ -4,12 +4,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import type { CardioMode, Equipment, Limitation } from '@/data/profile';
 import { PROGRAM_LENGTH_DAYS } from '@/data/program';
 import { dateFromKey, isValidDateKey } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EQUIPMENT: { id: Equipment; label: string; hint: string }[] = [
+  { id: 'home', label: 'Home gym', hint: 'Dumbbells, kettlebells, a bench; maybe a bar and rack' },
+  { id: 'gym', label: 'Full gym', hint: 'Barbells, machines, cables' },
+  { id: 'bodyweight', label: 'Bodyweight', hint: 'No equipment, or travelling' },
+];
+const CARDIO: { id: CardioMode; label: string }[] = [
+  { id: 'bike', label: 'Bike' },
+  { id: 'walk', label: 'Walk / jog' },
+  { id: 'row', label: 'Rower' },
+];
+const LIMITATIONS: { id: Limitation; label: string; hint: string }[] = [
+  { id: 'lower-back', label: 'Lower back', hint: 'Front-loaded squats, supported rows and bridges by default' },
+  { id: 'knee', label: 'Knees', hint: 'Box squats and step-ups by default; lighten before shortening range' },
+  { id: 'shoulder', label: 'Shoulders', hint: 'Neutral-grip and angled pressing by default' },
+];
 
 function hourLabel(h: number) {
   const suffix = h < 12 ? 'AM' : 'PM';
@@ -31,7 +47,10 @@ export default function SettingsScreen() {
     if (startValid && startDraft !== profile.programStartDate) setProfile({ programStartDate: startDraft });
   };
 
-  const hasFusion = profile.limitations.includes('lumbar-fusion');
+  const toggleLimitation = (id: Limitation) =>
+    setProfile({
+      limitations: profile.limitations.includes(id) ? profile.limitations.filter((l) => l !== id) : [...profile.limitations, id],
+    });
 
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
@@ -40,9 +59,57 @@ export default function SettingsScreen() {
 
         <ThemedText style={styles.sectionTitle}>Goal</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-          <Row label="Goal weight" hint="Shown as a dashed line on the weight chart">
+          <Row label="Goal weight" hint="The chart shows a steady 0.5–1 lb a week pace toward it">
             <Field value={profile.goalWeight} onChangeText={(t) => setProfile({ goalWeight: t.replace(/[^0-9.]/g, '') })} unit="lb" width={64} label="Goal weight in pounds" />
           </Row>
+        </View>
+
+        <ThemedText style={styles.sectionTitle}>Where you train</ThemedText>
+        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <View style={styles.stack}>
+            <ThemedText>Equipment</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Same 75 days for everyone. This only changes which movement fills each slot.
+            </ThemedText>
+            <View style={styles.chips}>
+              {EQUIPMENT.map((e) => (
+                <Chip key={e.id} on={profile.equipment === e.id} label={e.label} onPress={() => setProfile({ equipment: e.id })} />
+              ))}
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              {EQUIPMENT.find((e) => e.id === profile.equipment)?.hint}
+            </ThemedText>
+          </View>
+          <Divider />
+          <View style={styles.stack}>
+            <ThemedText>Cardio</ThemedText>
+            <View style={styles.chips}>
+              {CARDIO.map((c) => (
+                <Chip key={c.id} on={profile.cardioMode === c.id} label={c.label} onPress={() => setProfile({ cardioMode: c.id })} />
+              ))}
+            </View>
+          </View>
+          <Divider />
+          <Row label="Punching bag" hint="Offers bag rounds on Saturday conditioning">
+            <Switch value={profile.hasHeavyBag} onValueChange={(on) => setProfile({ hasHeavyBag: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Punching bag" />
+          </Row>
+        </View>
+
+        <ThemedText style={styles.sectionTitle}>Work around</ThemedText>
+        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <View style={styles.stack}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Picks movements many people with these histories find more comfortable. Every original movement stays available as a swap. This is training preference, not medical advice.
+            </ThemedText>
+          </View>
+          {LIMITATIONS.map((l) => (
+            <View key={l.id}>
+              <Divider />
+              <Row label={l.label} hint={l.hint}>
+                <Switch value={profile.limitations.includes(l.id)} onValueChange={() => toggleLimitation(l.id)} trackColor={{ true: theme.accent }} accessibilityLabel={l.label} />
+              </Row>
+            </View>
+          ))}
         </View>
 
         <ThemedText style={styles.sectionTitle}>Program</ThemedText>
@@ -77,63 +144,58 @@ export default function SettingsScreen() {
               The Today screen prompts for a morning weight on these days. You can still log on any day.
             </ThemedText>
             <View style={styles.chips}>
-              {WEEKDAYS.map((name, i) => {
-                const on = profile.weighInWeekdays.includes(i);
-                return (
-                  <Pressable
-                    key={name}
-                    onPress={() =>
-                      setProfile({
-                        weighInWeekdays: on ? profile.weighInWeekdays.filter((d) => d !== i) : [...profile.weighInWeekdays, i].sort(),
-                      })
-                    }
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: on }}
-                    style={[styles.chip, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
-                    <ThemedText type="smallBold" style={{ color: on ? theme.accentText : theme.textSecondary }}>
-                      {name}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
+              {WEEKDAYS.map((name, i) => (
+                <Chip
+                  key={name}
+                  on={profile.weighInWeekdays.includes(i)}
+                  label={name}
+                  onPress={() =>
+                    setProfile({
+                      weighInWeekdays: profile.weighInWeekdays.includes(i)
+                        ? profile.weighInWeekdays.filter((d) => d !== i)
+                        : [...profile.weighInWeekdays, i].sort(),
+                    })
+                  }
+                />
+              ))}
             </View>
           </View>
-          <Divider />
-          <Row label="Back-friendly adjustments" hint="Swaps in gentler options for a past lumbar fusion. Off = the standard program.">
-            <Switch
-              value={hasFusion}
-              onValueChange={(on) => setProfile({ limitations: on ? ['lumbar-fusion'] : [] })}
-              trackColor={{ true: theme.accent }}
-              accessibilityLabel="Back-friendly adjustments"
-            />
-          </Row>
         </View>
 
         <ThemedText style={styles.sectionTitle}>Reminders</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
           <Row label="Notifications" hint="A heads-up the night before and a nudge in the morning.">
-            <Switch
-              value={profile.notificationsEnabled}
-              onValueChange={(on) => setProfile({ notificationsEnabled: on })}
-              trackColor={{ true: theme.accent }}
-              accessibilityLabel="Notifications"
-            />
+            <Switch value={profile.notificationsEnabled} onValueChange={(on) => setProfile({ notificationsEnabled: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Notifications" />
           </Row>
           <Divider />
-          <Row label="Evening reminder" hint="“Tomorrow: Strength B, about 45 min”">
+          <Row label="Evening reminder" hint="“Tomorrow: Strength B, about 40 min”">
             <Stepper value={profile.eveningHour} onChange={(h) => setProfile({ eveningHour: h })} label="Evening reminder hour" />
           </Row>
           <Divider />
-          <Row label="Morning reminder" hint="“Day 9: Peloton Conditioning is ready”">
+          <Row label="Morning reminder" hint="“Day 9: Conditioning is ready”">
             <Stepper value={profile.morningHour} onChange={(h) => setProfile({ morningHour: h })} label="Morning reminder hour" />
           </Row>
         </View>
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
+          If you’ve been inactive for a long time or were told to limit activity, check with your doctor before starting.
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
           Onward · Consistency over perfection.
         </ThemedText>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Chip({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) {
+  const theme = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: on }} style={[styles.chip, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
+      <ThemedText type="smallBold" style={{ color: on ? theme.accentText : theme.textSecondary }}>
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -197,14 +259,7 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (h: numb
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  content: {
-    padding: Spacing.four,
-    paddingBottom: Spacing.six * 2,
-    gap: Spacing.two,
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    alignSelf: 'center',
-  },
+  content: { padding: Spacing.four, paddingBottom: Spacing.six * 2, gap: Spacing.two, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   heading: { fontSize: 34, lineHeight: 40, fontWeight: 700 },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   card: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.three },
@@ -220,5 +275,5 @@ const styles = StyleSheet.create({
   stepButton: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
   stepArrow: { fontSize: 28, lineHeight: 32 },
   stepValue: { fontSize: 16, fontWeight: 600, minWidth: 76, textAlign: 'center' },
-  footer: { textAlign: 'center', marginTop: Spacing.five },
+  footer: { textAlign: 'center', marginTop: Spacing.four },
 });

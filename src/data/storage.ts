@@ -19,6 +19,14 @@ export type DayRecord = {
   weights: Weights;
   /** Which movement was done in each slot, when it differs from the default */
   movements?: Record<string, string>;
+  /** Per movement: did every set reach the top of the rep range? */
+  hits?: Record<string, 'hit' | 'miss'>;
+  /** The short (20–25 min) version was done */
+  short?: boolean;
+  /** This session was the automatic lighter re-entry after days away */
+  reentry?: boolean;
+  /** This session ran at the previous phase's prescription after 7+ days away */
+  holdPhase?: boolean;
 };
 
 export type AppState = {
@@ -27,7 +35,7 @@ export type AppState = {
   /** Most recent weight used per movement, to pre-fill next time */
   lastWeights: Weights;
   /** Today's in-progress ticks and weights, so closing the app loses nothing */
-  draft: { date: string; checklist: Checklist; weights: Weights } | null;
+  draft: { date: string; checklist: Checklist; weights: Weights; hits?: Record<string, 'hit' | 'miss'>; short?: boolean } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;
   /** Weigh-ins, date (YYYY-MM-DD) → pounds exactly as typed, e.g. "212.4" */
@@ -60,6 +68,8 @@ export async function loadState(): Promise<AppState> {
     settings?: { notificationsEnabled?: boolean; eveningHour?: number; morningHour?: number };
   };
   const { goalWeight, settings, ...rest } = saved;
+  // The back limitation was renamed from "lumbar-fusion" to "lower-back"
+  const savedLimitations = (saved.profile?.limitations as string[] | undefined)?.map((l) => (l === 'lumbar-fusion' ? 'lower-back' : l));
   // Checklist items were renamed: "protein" became "meals"; "water" was dropped
   const migrate = (c: Record<string, boolean | undefined> | undefined): Checklist => {
     if (!c) return {};
@@ -78,6 +88,7 @@ export async function loadState(): Promise<AppState> {
       ...(goalWeight ? { goalWeight } : {}),
       ...settings,
       ...saved.profile,
+      ...(savedLimitations ? { limitations: savedLimitations as Profile['limitations'] } : {}),
     },
   };
 }

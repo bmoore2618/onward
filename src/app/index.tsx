@@ -106,6 +106,28 @@ export default function TodayScreen() {
 
             {session.kind === 'rest' && !v.isFuture && <WeekSummary date={viewDate} />}
 
+            {session.reentry && (
+              <View style={[styles.infoCard, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }]}>
+                <ThemedText type="smallBold">Easing back in</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  A few days away, so today is a lighter session: two sets per movement, about 10% less weight. That’s the plan, not a penalty.
+                </ThemedText>
+              </View>
+            )}
+
+            {session.kind === 'strength' && editable && (
+              <Pressable
+                onPress={() => onward.toggleShort(viewDate)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: v.short }}
+                style={[styles.shortToggle, { borderColor: v.short ? theme.accent : theme.border, backgroundColor: v.short ? theme.accentSoft : 'transparent' }]}>
+                <ThemedText type="smallBold">{v.short ? 'Short version on' : 'Short on time?'}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {v.short ? 'First four movements, one set fewer. Still counts as a full day.' : 'Tap for the 20–25 minute version. It counts.'}
+                </ThemedText>
+              </Pressable>
+            )}
+
             <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
               {session.exercises?.map((ex, i) => (
                 <View
@@ -117,11 +139,37 @@ export default function TodayScreen() {
                     disabled={!editable}
                     accessibilityRole="button"
                     accessibilityLabel={`${ex.movement.name}${editable ? ', tap to swap' : ''}`}>
-                    <ThemedText>{ex.movement.name}</ThemedText>
+                    <ThemedText>
+                      {ex.movement.name}
+                      {ex.finisher ? <ThemedText type="small" themeColor="textSecondary">  · optional</ThemedText> : null}
+                    </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
-                      {ex.prescription}
+                      {ex.prescription} · rest {ex.rest}
                     </ThemedText>
                     {ex.movement.weighted && editable && <LastLift movementId={ex.movement.id} beforeDate={viewDate} />}
+                    {ex.movement.weighted && editable && (
+                      <View style={styles.hitRow}>
+                        <ThemedText type="small" themeColor="textSecondary">
+                          All sets hit the top of the range?
+                        </ThemedText>
+                        {(['hit', 'miss'] as const).map((h) => {
+                          const on = v.hitFor(ex.movement.id) === h;
+                          return (
+                            <Pressable
+                              key={h}
+                              onPress={() => onward.setHit(viewDate, ex.movement.id, on ? null : h)}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: on }}
+                              accessibilityLabel={h === 'hit' ? 'Yes, all reps hit' : 'No, fell short'}
+                              style={[styles.hitChip, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
+                              <ThemedText type="smallBold" style={{ color: on ? theme.accentText : theme.textSecondary }}>
+                                {h === 'hit' ? 'Yes' : 'Not quite'}
+                              </ThemedText>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
                     {(ex.note ?? ex.movement.cue) && (
                       <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
                         {ex.note ?? ex.movement.cue}
@@ -303,13 +351,13 @@ export default function TodayScreen() {
   );
 }
 
-/** "Last: 70 lb (Day 8)" under a weighted exercise, or a first-time hint */
+/** "Last: 70 lb (Day 8), all reps hit → try 75" under a weighted exercise, or a first-time hint */
 function LastLift({ movementId, beforeDate }: { movementId: string; beforeDate: string }) {
   const onward = useOnward();
-  const last = onward.lastLift(movementId, beforeDate);
+  const s = onward.suggestion(movementId, beforeDate);
   return (
     <ThemedText type="small" themeColor="textSecondary">
-      {last ? `Last: ${last.lb} lb (Day ${last.day})` : 'First time. Pick a weight that leaves 3–4 reps in the tank.'}
+      {s.text}
     </ThemedText>
   );
 }
@@ -342,6 +390,10 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   exerciseText: { flex: 1, gap: Spacing.half },
+  hitRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.one, marginTop: Spacing.half },
+  hitChip: { borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 32, justifyContent: 'center' },
+  infoCard: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half },
+  shortToggle: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half, minHeight: 56 },
   note: { fontStyle: 'italic' },
   exerciseLinks: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.half },
   blockRow: { paddingVertical: Spacing.three, gap: Spacing.half },

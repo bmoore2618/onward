@@ -50,7 +50,16 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 `reports/Comeback program design evidence.md` is the evidence-based program spec (research notes in `research_notes/`). Decision: keep the Rebuild skeleton (3 full-body pattern-slot sessions, double progression, sub-failure effort, four phases, 3+2+1+1 week); revise the rule layer per the report's 13-item change list (Rebuild-phase volume cut, finishers optional, second weekly hinge, 20–25 min short sessions, coded progression/reset rules, automatic lighter re-entry after gaps, shorter Tuesday conditioning, rest periods shown, day-completion rule, 0.5–1 lb/week goal line, equipment profiles + knee/shoulder toggles, copy audit). Read the report before changing program.ts.
 
 ## Programming decision (Oct 2026)
-One challenge, many settings. The 75-day shape is the same for everyone: weekly rhythm (3 strength, 2 conditioning, 1 recovery, 1 rest), phases, and the five daily habits. What varies by user is only which movement fills each exercise slot. Planned equipment profiles: home gym (dumbbells/kettlebells, current default), full gym, bodyweight/travel, and a cardio-only track (its own version of the strength days). Build this as per-slot defaults and filtered swap lists, not a from-scratch program generator. Onboarding for it is roadmap stage 3.
+One challenge, many settings. The 75-day shape is the same for everyone: weekly rhythm (3 strength, 2 conditioning, 1 recovery, 1 rest), phases, and the five daily habits. What varies by user is only which movement fills each exercise slot. Equipment profiles (`profile.equipment`): home (default), gym, bodyweight; cardio mode bike/walk/row; heavy bag toggle. A cardio-only track is still to do. Onboarding is roadmap stage 3.
+
+**Program rules now in code (`src/data/program.ts`, from the research report):**
+- Core slots first, finishers optional (dropped in the short version). Per-phase sets/reps/effort/rest in `rxFor`: Rebuild days 1–7 = 2 sets, 3–4 RIR; days 8–14 = 3/2 sets; Build 3 sets, 2–3 RIR; Push 4/3 sets, 6–10 reps; Perform same with 1 RIR on last set of first three slots; final week no new loads.
+- Variety: main-slot defaults rotate by phase (4 entries per slot per equipment), finishers rotate weekly, A/B/C use different variants of each pattern. User swaps always win.
+- Hinge appears twice a week (B main, C lighter). Conditioning ramps duration before intensity; Tuesday 20–25 min in Rebuild. Saturday: bag first unless the lower-back toggle is on, then bike.
+- Short version: first four core slots, one set fewer (min 2), no finishers; counts as a completed day. Day-completion rule in `dayCounts`.
+- Re-entry (hook `optionsFor`): 3+ consecutive missed training days → next session 2 sets/slot, −10% loads, no finishers. 7+ days away → the return week runs the previous phase's prescription (after Day 14).
+- Progression (`suggestion` in the hook): "all sets hit the top of the range?" per lift → next step (5 lb to 40, then 10, capped ~10%); two misses in a row → −10%.
+- Limitations are comfort preferences ("work around"): lower-back, knee, shoulder. Copy never says "safe/protects/rehab"; stop rule is two sentences; one doctor line in Settings.
 
 ## Founder / first user (drives v1 workout content)
 - Former competitive CrossFit athlete returning after time off; has a past lumbar fusion (L5-S1). Goal: lose ~15–20 lb and rebuild a routine. Prefers simple strength and HIIT; doesn't need CrossFit-style programming.

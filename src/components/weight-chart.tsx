@@ -12,8 +12,8 @@ type Point = { date: string; lb: number };
 const HEIGHT = 180;
 const PAD = { top: 16, right: 16, bottom: 28, left: 40 };
 
-/** Simple line chart of weigh-ins over time, with the goal as a dashed line */
-export function WeightChart({ points, goal }: { points: Point[]; goal?: number }) {
+/** Simple line chart of weigh-ins over time, with the goal as a dashed line and a 0.75 lb/week pace line */
+export function WeightChart({ points, goal, paceStart }: { points: Point[]; goal?: number; paceStart?: Point }) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
 
@@ -25,7 +25,8 @@ export function WeightChart({ points, goal }: { points: Point[]; goal?: number }
     );
   }
 
-  const values = points.map((p) => p.lb).concat(goal ? [goal] : []);
+  const paceEndLb = paceStart ? paceStart.lb - (0.75 * (dateFromKey(points[points.length - 1].date).getTime() - dateFromKey(paceStart.date).getTime())) / (7 * 86_400_000) : undefined;
+  const values = points.map((p) => p.lb).concat(goal ? [goal] : [], paceEndLb !== undefined ? [paceEndLb] : []);
   const min = Math.floor(Math.min(...values) - 1);
   const max = Math.ceil(Math.max(...values) + 1);
   const t0 = dateFromKey(points[0].date).getTime();
@@ -69,6 +70,17 @@ export function WeightChart({ points, goal }: { points: Point[]; goal?: number }
               stroke={theme.accent}
               strokeWidth={1.5}
               strokeDasharray="6 4"
+            />
+          )}
+          {paceStart && paceEndLb !== undefined && (
+            <Line
+              x1={x(paceStart.date)}
+              y1={y(paceStart.lb)}
+              x2={x(points[points.length - 1].date)}
+              y2={y(paceEndLb)}
+              stroke={theme.textSecondary}
+              strokeWidth={1}
+              strokeDasharray="2 4"
             />
           )}
           <Polyline points={coords} fill="none" stroke={theme.accent} strokeWidth={2.5} strokeLinejoin="round" />

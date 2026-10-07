@@ -11,7 +11,7 @@ function short(date: string) {
   return dateFromKey(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-/** The week's numbers, shown on rest days */
+/** The week's numbers, shown on rest days, with a light look back at last week */
 export function WeekSummary({ date }: { date: string }) {
   const theme = useTheme();
   const onward = useOnward();
@@ -27,6 +27,14 @@ export function WeekSummary({ date }: { date: string }) {
           ? 'Some weeks are like this. Next week starts fresh on Monday.'
           : 'A quiet week. Monday is a clean start, no catching up needed.';
 
+  const review = s.previous
+    ? s.workoutsDone > s.previous.workoutsDone
+      ? `Up from ${s.previous.workoutsDone} workouts last week.`
+      : s.workoutsDone < s.previous.workoutsDone
+        ? `Last week was ${s.previous.workoutsDone}. If this week was crowded, the short sessions are there for that.`
+        : `Same as last week. Steady is the goal.`
+    : null;
+
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
@@ -40,6 +48,7 @@ export function WeekSummary({ date }: { date: string }) {
       </View>
       <ThemedText type="small" themeColor="textSecondary">
         {line}
+        {review ? ` ${review}` : ''}
       </ThemedText>
     </View>
   );
