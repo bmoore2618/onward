@@ -70,6 +70,8 @@ export async function loadState(): Promise<AppState> {
     ...INITIAL_STATE,
     ...rest,
     completed: (rest.completed ?? []).map((r) => ({ ...r, checklist: migrate(r.checklist) })),
+    // Photos saved before poses existed count as "front"
+    photos: (rest.photos ?? []).map((p) => ({ ...p, pose: p.pose ?? 'front' })),
     draft: rest.draft ? { ...rest.draft, checklist: migrate(rest.draft.checklist) } : null,
     profile: {
       ...DEFAULT_PROFILE,

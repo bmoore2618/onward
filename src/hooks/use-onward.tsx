@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AppState as RNAppState } from 'react-native';
 
 import { syncNotifications } from '@/data/notifications';
-import { deletePhotoFile, pickPhoto, type Photo } from '@/data/photos';
+import { deletePhotoFile, type Photo } from '@/data/photos';
 import type { Profile } from '@/data/profile';
 import { sessionForDay, type ChecklistId, type Session } from '@/data/program';
 import {
@@ -75,9 +75,11 @@ type Onward = {
   weekSummary: (date: string) => WeekSummary;
 
   photos: Photo[];
-  /** Opens the camera or library; resolves true if a photo was added */
-  addPhoto: (source: 'camera' | 'library') => Promise<boolean>;
+  /** Add or replace photos (matched by id) */
+  savePhotos: (photos: Photo[]) => void;
   removePhoto: (id: string) => void;
+  /** Move every photo on one date to another date */
+  moveSession: (fromDate: string, toDate: string) => void;
 
   setProfile: (patch: Partial<Profile>) => void;
   setBodyWeight: (date: string, value: string) => void;
@@ -255,12 +257,17 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
 
       photos: state.photos,
 
-      addPhoto: async (source) => {
-        const photo = await pickPhoto(source);
-        if (!photo) return false;
-        update((prev) => ({ ...prev, photos: [...prev.photos, photo] }));
-        return true;
-      },
+      savePhotos: (photos) =>
+        update((prev) => {
+          const ids = new Set(photos.map((p) => p.id));
+          // A replaced photo's old file is no longer needed
+          for (const old of prev.photos) {
+            const next = photos.find((p) => p.id === old.id);
+            if (next && next.file !== old.file) deletePhotoFile(old);
+          }
+          const merged = [...prev.photos.filter((p) => !ids.has(p.id)), ...photos].sort((a, b) => a.date.localeCompare(b.date));
+          return { ...prev, photos: merged };
+        }),
 
       removePhoto: (id) =>
         update((prev) => {
@@ -268,6 +275,14 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           if (photo) deletePhotoFile(photo);
           return { ...prev, photos: prev.photos.filter((p) => p.id !== id) };
         }),
+
+      moveSession: (fromDate, toDate) =>
+        update((prev) => ({
+          ...prev,
+          photos: prev.photos
+            .map((p) => (p.date === fromDate ? { ...p, date: toDate } : p))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        })),
 
       setProfile: (patch) => update((prev) => ({ ...prev, profile: { ...prev.profile, ...patch } })),
 
