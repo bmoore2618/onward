@@ -46,6 +46,9 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 - **Adaptive coaching:** adjust volume based on recovery, soreness and missed days (e.g. "You haven't trained in five days. Today's session is shortened to 25 minutes to get you moving again."). Frame this as training adjustments only — never diagnosis or medical advice.
 - **Freemium:** Free (habits, basic plan, weight tracking) vs. Onward Pro (adaptive workouts, custom programs, Apple Health, analytics, coaching). Pricing undecided.
 
+## Program research (Oct 2026)
+`reports/Comeback program design evidence.md` is the evidence-based program spec (research notes in `research_notes/`). Decision: keep the Rebuild skeleton (3 full-body pattern-slot sessions, double progression, sub-failure effort, four phases, 3+2+1+1 week); revise the rule layer per the report's 13-item change list (Rebuild-phase volume cut, finishers optional, second weekly hinge, 20–25 min short sessions, coded progression/reset rules, automatic lighter re-entry after gaps, shorter Tuesday conditioning, rest periods shown, day-completion rule, 0.5–1 lb/week goal line, equipment profiles + knee/shoulder toggles, copy audit). Read the report before changing program.ts.
+
 ## Programming decision (Oct 2026)
 One challenge, many settings. The 75-day shape is the same for everyone: weekly rhythm (3 strength, 2 conditioning, 1 recovery, 1 rest), phases, and the five daily habits. What varies by user is only which movement fills each exercise slot. Planned equipment profiles: home gym (dumbbells/kettlebells, current default), full gym, bodyweight/travel, and a cardio-only track (its own version of the strength days). Build this as per-slot defaults and filtered swap lists, not a from-scratch program generator. Onboarding for it is roadmap stage 3.
 
