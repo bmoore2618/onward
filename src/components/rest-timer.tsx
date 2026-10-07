@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Vibration, View } from 'react-native';
+import { Pressable, StyleSheet, Vibration } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const PRESETS = [60, 90, 120];
 
 /** Pull the first number of seconds out of a rest string like "90–120 s" or "2–3 min" */
 export function restSeconds(rest: string): number {
@@ -16,14 +14,13 @@ export function restSeconds(rest: string): number {
 }
 
 type Props = {
-  /** Change this to auto-start a countdown (e.g. after logging a set) */
+  /** Change this to start a countdown (each movement has its own Rest button) */
   kick?: { seconds: number; nonce: number };
 };
 
 /**
- * Between-sets rest timer. Tap a preset to start, tap the clock to stop.
- * While running it also shows as a floating pill so it stays visible
- * when you scroll back up to the exercise list.
+ * Floating rest countdown. Started from a movement's Rest button; tap the
+ * pill to stop early. Buzzes at zero.
  */
 export function RestTimer({ kick }: Props) {
   const theme = useTheme();
@@ -46,75 +43,38 @@ export function RestTimer({ kick }: Props) {
     return () => clearTimeout(t);
   }, [remaining]);
 
-  const running = remaining !== null;
-  const mm = Math.floor((remaining ?? 0) / 60);
-  const ss = String((remaining ?? 0) % 60).padStart(2, '0');
+  if (remaining === null) return null;
+  const mm = Math.floor(remaining / 60);
+  const ss = String(remaining % 60).padStart(2, '0');
 
   return (
-    <>
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-        <View style={styles.row}>
-          <View style={styles.text}>
-            <ThemedText>Rest timer</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {running ? 'Tap the clock to stop.' : 'Starts itself when you log a set. Buzzes when it’s time.'}
-            </ThemedText>
-          </View>
-          {running ? (
-            <Pressable onPress={() => setRemaining(null)} accessibilityRole="button" accessibilityLabel="Stop rest timer" style={[styles.clock, { backgroundColor: theme.accent }]}>
-              <ThemedText style={[styles.clockText, { color: theme.accentText }]}>
-                {mm}:{ss}
-              </ThemedText>
-            </Pressable>
-          ) : (
-            <View style={styles.presets}>
-              {PRESETS.map((s) => (
-                <Pressable
-                  key={s}
-                  onPress={() => setRemaining(s)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Start ${s} second rest`}
-                  style={({ pressed }) => [styles.preset, { borderColor: theme.accent }, pressed && { opacity: 0.6 }]}>
-                  <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                    {s}s
-                  </ThemedText>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
-      {running && (
-        <Pressable onPress={() => setRemaining(null)} accessibilityRole="button" accessibilityLabel="Stop rest timer" style={[styles.pill, { backgroundColor: theme.accent }]}>
-          <ThemedText type="smallBold" style={{ color: theme.accentText }}>
-            Rest {mm}:{ss}
-          </ThemedText>
-        </Pressable>
-      )}
-    </>
+    <Pressable onPress={() => setRemaining(null)} accessibilityRole="button" accessibilityLabel="Stop rest timer" style={[styles.pill, { backgroundColor: theme.accent }]}>
+      <ThemedText style={[styles.pillText, { color: theme.accentText }]}>
+        {remaining === 0 ? 'Go' : `Rest ${mm}:${ss}`}
+      </ThemedText>
+      <ThemedText type="small" style={{ color: theme.accentText, opacity: 0.8 }}>
+        tap to stop
+      </ThemedText>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.three },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 72 },
-  text: { flex: 1, gap: 2 },
-  presets: { flexDirection: 'row', gap: Spacing.one },
-  preset: { minWidth: 48, height: 44, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.one },
-  clock: { minWidth: 92, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.three },
-  clockText: { fontSize: 22, fontWeight: 700, fontVariant: ['tabular-nums'] },
   pill: {
     position: 'absolute',
     top: Spacing.two,
     alignSelf: 'center',
     borderRadius: 999,
-    paddingHorizontal: Spacing.three,
-    height: 40,
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.four,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
+  pillText: { fontSize: 18, fontWeight: 700, fontVariant: ['tabular-nums'] },
 });

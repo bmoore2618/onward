@@ -134,12 +134,7 @@ export default function TodayScreen() {
                 <View
                   key={ex.slot}
                   style={[styles.exerciseRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
-                  <Pressable
-                    style={styles.exerciseText}
-                    onPress={() => editable && setSwapping(ex)}
-                    disabled={!editable}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${ex.movement.name}${editable ? ', tap to swap' : ''}`}>
+                  <View style={styles.exerciseText}>
                     <ThemedText>
                       {ex.movement.name}
                       {ex.finisher ? <ThemedText type="small" themeColor="textSecondary">  · optional</ThemedText> : null}
@@ -158,10 +153,7 @@ export default function TodayScreen() {
                           return (
                             <Pressable
                               key={h}
-                              onPress={() => {
-                                onward.setHit(viewDate, ex.movement.id, on ? null : h);
-                                if (!on && v.isToday) setTimerKick({ seconds: restSeconds(ex.rest), nonce: Date.now() });
-                              }}
+                              onPress={() => onward.setHit(viewDate, ex.movement.id, on ? null : h)}
                               accessibilityRole="radio"
                               accessibilityState={{ selected: on }}
                               accessibilityLabel={h === 'hit' ? 'Yes, all reps hit' : 'No, fell short'}
@@ -180,10 +172,24 @@ export default function TodayScreen() {
                       </ThemedText>
                     )}
                     <View style={styles.exerciseLinks}>
+                      {editable && v.isToday && session.kind === 'strength' && (
+                        <Pressable
+                          onPress={() => setTimerKick({ seconds: restSeconds(ex.rest), nonce: Date.now() })}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Start ${ex.rest} rest for ${ex.movement.name}`}
+                          style={[styles.restButton, { borderColor: theme.accent }]}>
+                          <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                            Rest {ex.rest.replace('–', '-')}
+                          </ThemedText>
+                        </Pressable>
+                      )}
                       {editable && (
-                        <ThemedText type="small" style={{ color: theme.accent }}>
-                          Swap
-                        </ThemedText>
+                        <Pressable onPress={() => setSwapping(ex)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Swap ${ex.movement.name}`}>
+                          <ThemedText type="small" style={{ color: theme.accent }}>
+                            Swap
+                          </ThemedText>
+                        </Pressable>
                       )}
                       {ex.movement.videoUrl && (
                         <Pressable onPress={() => openURL(ex.movement.videoUrl!)} hitSlop={8} accessibilityRole="link">
@@ -193,7 +199,7 @@ export default function TodayScreen() {
                         </Pressable>
                       )}
                     </View>
-                  </Pressable>
+                  </View>
                   {ex.movement.weighted && editable && (
                     <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
                       <TextInput
@@ -245,8 +251,6 @@ export default function TodayScreen() {
                 </ThemedText>
               ))}
             </View>
-
-            {editable && session.kind === 'strength' && <RestTimer kick={timerKick} />}
 
             {editable && (
               <>
@@ -342,6 +346,8 @@ export default function TodayScreen() {
           </>
         )}
 
+        {v.isToday && session.kind === 'strength' && <RestTimer kick={timerKick} />}
+
         <SwapPicker
           exercise={swapping}
           phaseName={phaseForDay(v.day).name}
@@ -401,7 +407,8 @@ const styles = StyleSheet.create({
   infoCard: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half },
   shortToggle: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half, minHeight: 56 },
   note: { fontStyle: 'italic' },
-  exerciseLinks: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.half },
+  exerciseLinks: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.three, marginTop: Spacing.half },
+  restButton: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 32, justifyContent: 'center' },
   blockRow: { paddingVertical: Spacing.three, gap: Spacing.half },
   weightBox: {
     flexDirection: 'row',
