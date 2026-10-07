@@ -132,6 +132,7 @@ export default function ProgressScreen() {
   const change = first && latest ? Math.round((latest.lb - first.lb) * 10) / 10 : null;
   const changeText = change === null ? '–' : change > 0 ? `+${change}` : `${change}`;
   const todayView = onward.viewDay(today);
+  const bestLifts = onward.bestLifts();
 
   const selectedDay = selected ? programDayFor(selected) : null;
   const selectedView = selected && selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.viewDay(selected) : null;
@@ -187,6 +188,30 @@ export default function ProgressScreen() {
             Set your goal weight on the Settings tab.
           </ThemedText>
         </View>
+
+        {bestLifts.length > 0 && (
+          <>
+            <ThemedText style={styles.sectionTitle}>Strength since Day 1</ThemedText>
+            <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+              {bestLifts.map((l, i) => (
+                <View key={l.movementId} style={[styles.detailRow, styles.liftRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+                  <View style={styles.detailName}>
+                    <ThemedText>{l.name}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Best {l.best} lb · Day {l.bestDay}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={{ color: l.best > l.first ? theme.accent : theme.textSecondary, fontWeight: 700 }}>
+                    {l.best > l.first ? `+${Math.round((l.best - l.first) * 10) / 10} lb` : `${l.first} lb`}
+                  </ThemedText>
+                </View>
+              ))}
+              <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNote}>
+                Best since Day 1, not lifetime bests. That’s the comparison that matters now.
+              </ThemedText>
+            </View>
+          </>
+        )}
 
         <ThemedText style={styles.sectionTitle}>Progress photos</ThemedText>
         <ProgressPhotos />
@@ -463,6 +488,7 @@ const styles = StyleSheet.create({
   detailList: { gap: Spacing.one },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
   detailName: { flex: 1 },
+  liftRow: { alignItems: 'center', paddingVertical: Spacing.two, minHeight: 56 },
   noteText: { fontStyle: 'italic' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, minHeight: 40, justifyContent: 'center' },

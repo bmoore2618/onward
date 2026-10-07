@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIn } from '@/components/check-in';
-import { RestTimer } from '@/components/rest-timer';
+import { RestTimer, restSeconds } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { WeekSummary } from '@/components/week-summary';
@@ -27,6 +27,7 @@ export default function TodayScreen() {
   const viewDate = nav.date;
   const setViewDate = (date: string) => setNav({ key: navKey, date });
   const [swapping, setSwapping] = useState<Exercise | null>(null);
+  const [timerKick, setTimerKick] = useState<{ seconds: number; nonce: number }>();
 
   if (!onward.loaded) {
     return <View style={[styles.fill, { backgroundColor: theme.background }]} />;
@@ -157,7 +158,10 @@ export default function TodayScreen() {
                           return (
                             <Pressable
                               key={h}
-                              onPress={() => onward.setHit(viewDate, ex.movement.id, on ? null : h)}
+                              onPress={() => {
+                                onward.setHit(viewDate, ex.movement.id, on ? null : h);
+                                if (!on && v.isToday) setTimerKick({ seconds: restSeconds(ex.rest), nonce: Date.now() });
+                              }}
                               accessibilityRole="radio"
                               accessibilityState={{ selected: on }}
                               accessibilityLabel={h === 'hit' ? 'Yes, all reps hit' : 'No, fell short'}
@@ -242,7 +246,7 @@ export default function TodayScreen() {
               ))}
             </View>
 
-            {editable && session.kind === 'strength' && <RestTimer />}
+            {editable && session.kind === 'strength' && <RestTimer kick={timerKick} />}
 
             {editable && (
               <>
@@ -340,8 +344,10 @@ export default function TodayScreen() {
 
         <SwapPicker
           exercise={swapping}
-          onPick={(movementId) => {
-            if (swapping) onward.setMovement(viewDate, swapping.slot, movementId);
+          phaseName={phaseForDay(v.day).name}
+          askScope={!v.isPast && !v.record}
+          onPick={(movementId, scope) => {
+            if (swapping) onward.setMovement(viewDate, swapping.slot, movementId, scope);
             setSwapping(null);
           }}
           onClose={() => setSwapping(null)}

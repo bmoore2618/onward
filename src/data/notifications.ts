@@ -2,11 +2,13 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import type { Profile } from '@/data/profile';
-import { PROGRAM_LENGTH_DAYS, sessionForDay, type Swaps } from '@/data/program';
+import { PROGRAM_LENGTH_DAYS, type Session } from '@/data/program';
 import { addDays, dateFromKey, daysBetween, todayKey } from '@/data/storage';
 
-/** How many days ahead to schedule. iOS allows 64 pending; 2 per day keeps us well under. */
+/** How many days ahead to schedule. iOS allows 64 pending; ~2 per day keeps us well under. */
 const DAYS_AHEAD = 14;
+
+type WeekNumbers = { week: number; workoutsDone: number; trainingDays: number; weightChange: number | null };
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -28,11 +30,16 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 /**
  * Replace all scheduled reminders with the next two weeks:
- *   evening (default 8 PM): "Tomorrow: Strength B, about 45 min"
- *   morning (default 7 AM): "Day 9: Peloton Conditioning is ready"
- * Called whenever the app opens or settings change, so the schedule never runs dry.
+ *   evening (default 8 PM): "Tomorrow: Strength B, about 40 min"
+ *   morning (default 7 AM): "Day 9: Conditioning is ready"
+ *   Sunday morning: the week's numbers, using what's logged at the time of scheduling
+ * Called whenever the app opens or the data changes, so the schedule never runs dry.
  */
-export async function syncNotifications(profile: Profile, swaps: Swaps): Promise<void> {
+export async function syncNotifications(
+  profile: Profile,
+  sessionFor: (day: number) => Session,
+  weekSummary: (date: string) => WeekNumbers
+): Promise<void> {
   if (Platform.OS === 'web') return;
 
   await Notifications.cancelAllScheduledNotificationsAsync();
@@ -46,20 +53,22 @@ export async function syncNotifications(profile: Profile, swaps: Swaps): Promise
     const date = addDays(today, i);
     const day = daysBetween(profile.programStartDate, date) + 1;
 
-    // Morning: today's session
+    // Morning: today's session (or the week wrap on rest days)
     if (day >= 1 && day <= PROGRAM_LENGTH_DAYS) {
-      const session = sessionForDay(day, profile, swaps);
+      const session = sessionFor(day);
       const at = dateFromKey(date);
       at.setHours(profile.morningHour, 0, 0, 0);
       if (at > now) {
+        let title = `Day ${day}: ${session.title}`;
+        let body = `${session.length}. Today's session is ready when you are.`;
+        if (session.kind === 'rest') {
+          const w = weekSummary(date);
+          const change = w.weightChange === null ? '' : `, ${w.weightChange > 0 ? '+' : ''}${w.weightChange} lb`;
+          title = `Week ${w.week} wrap`;
+          body = `${w.workoutsDone} of ${w.trainingDays} workouts${change}. Rest day today. Monday is a clean start.`;
+        }
         await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `Day ${day}: ${session.title}`,
-            body:
-              session.kind === 'rest'
-                ? 'Rest day. Easy walking is fine. See you tomorrow.'
-                : `${session.length}. Today's session is ready when you are.`,
-          },
+          content: { title, body },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
         });
       }
@@ -68,17 +77,14 @@ export async function syncNotifications(profile: Profile, swaps: Swaps): Promise
     // Evening: tomorrow's session
     const tomorrowDay = day + 1;
     if (tomorrowDay >= 1 && tomorrowDay <= PROGRAM_LENGTH_DAYS) {
-      const next = sessionForDay(tomorrowDay, profile, swaps);
+      const next = sessionFor(tomorrowDay);
       const at = dateFromKey(date);
       at.setHours(profile.eveningHour, 0, 0, 0);
       if (at > now) {
         await Notifications.scheduleNotificationAsync({
           content: {
             title: `Tomorrow: ${next.title}`,
-            body:
-              next.kind === 'rest'
-                ? `Day ${tomorrowDay} is a full rest day.`
-                : `Day ${tomorrowDay}, ${next.length}.`,
+            body: next.kind === 'rest' ? `Day ${tomorrowDay} is a full rest day.` : `Day ${tomorrowDay}, ${next.length}.`,
           },
           trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
         });

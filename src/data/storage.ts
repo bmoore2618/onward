@@ -38,6 +38,8 @@ export type AppState = {
   draft: { date: string; checklist: Checklist; weights: Weights; hits?: Record<string, 'hit' | 'miss'>; short?: boolean } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;
+  /** How long a swap lasts: always, or only for the phase it was made in (phase index) */
+  swapScope: Record<string, { scope: 'always' | 'phase'; phase: number }>;
   /** Weigh-ins, date (YYYY-MM-DD) → pounds exactly as typed, e.g. "212.4" */
   bodyWeight: Record<string, string>;
   /** Progress photos, oldest first. Image files live in the app's documents folder. */
@@ -54,6 +56,7 @@ export const INITIAL_STATE: AppState = {
   lastWeights: {},
   draft: null,
   swaps: {},
+  swapScope: {},
   bodyWeight: {},
   photos: [],
   checkins: {},

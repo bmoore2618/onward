@@ -8,12 +8,16 @@ import {
   checklistFor,
   dayCounts,
   isBigJump,
+  movement,
   nextLoad,
+  PHASES,
+  phaseForDay,
   resetLoad,
   sessionForDay,
   type ChecklistId,
   type Session,
   type SessionOptions,
+  type Swaps,
 } from '@/data/program';
 import {
   addDays,
@@ -110,7 +114,10 @@ type Onward = {
   /** Edits apply to today's draft, or to the saved record for any other day */
   setWeight: (date: string, movementId: string, value: string) => void;
   setHit: (date: string, movementId: string, hit: 'hit' | 'miss' | null) => void;
-  setMovement: (date: string, slot: string, movementId: string) => void;
+  /** Swap a slot. On today/future the scope says whether it outlives the current phase. */
+  setMovement: (date: string, slot: string, movementId: string, scope?: 'always' | 'phase') => void;
+  /** Best logged weight per movement since Day 1, with the first weight for comparison */
+  bestLifts: () => { movementId: string; name: string; first: number; best: number; bestDay: number }[];
   toggleItem: (date: string, id: ChecklistId) => void;
   toggleShort: (date: string) => void;
   completeToday: () => void;
@@ -143,11 +150,13 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  // Keep the next two weeks of reminders scheduled
+  // Keep the next two weeks of reminders scheduled (re-run whenever the data they describe changes)
   useEffect(() => {
     if (!loaded) return;
-    syncNotifications(state.profile, state.swaps).catch(() => {});
-  }, [loaded, today, state.profile, state.swaps]);
+    const t = setTimeout(() => syncNotifications(state.profile, value.sessionFor, value.weekSummary).catch(() => {}), 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, today, state.profile, state.swaps, state.swapScope, state.completed, state.bodyWeight]);
 
   const update = useCallback((change: (prev: AppState) => AppState) => {
     setState((prev) => {
@@ -160,7 +169,18 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Onward>(() => {
     const { profile } = state;
     const programDayFor = (date: string) => daysBetween(profile.programStartDate, date) + 1;
-    const sessionFor = (day: number) => sessionForDay(day, profile, state.swaps);
+    /** Swaps that still apply on a given day: "phase" swaps expire when the phase changes */
+    const effectiveSwaps = (day: number): Swaps => {
+      const p = phaseForDay(day);
+      const pIndex = PHASES.indexOf(p);
+      const out: Swaps = {};
+      for (const [slot, id] of Object.entries(state.swaps)) {
+        const meta = state.swapScope[slot];
+        if (!meta || meta.scope === 'always' || meta.phase === pIndex) out[slot] = id;
+      }
+      return out;
+    };
+    const sessionFor = (day: number) => sessionForDay(day, profile, effectiveSwaps(day));
     const recordFor = (date: string) => state.completed.find((r) => r.date === date);
     const draft = state.draft?.date === today ? state.draft : emptyDraft(today);
     const isTrainingDay = (day: number) => {
@@ -217,7 +237,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
     const sessionForDate = (date: string, record: DayRecord | undefined) => {
       const day = programDayFor(date);
       const opts = record ? { ...optionsFor(date, record), reentry: !!record.reentry, holdPhase: !!record.holdPhase } : optionsFor(date, undefined);
-      return { session: sessionForDay(day, profile, { ...state.swaps, ...record?.movements }, opts), opts };
+      return { session: sessionForDay(day, profile, { ...effectiveSwaps(day), ...record?.movements }, opts), opts };
     };
 
     /** Upsert the record for a date and apply a change to it */
@@ -434,13 +454,35 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           return withRecord(prev, date, (r) => ({ ...r, hits: apply(r.hits) }));
         }),
 
-      setMovement: (date, slot, movementId) =>
+      setMovement: (date, slot, movementId, scope = 'always') =>
         update((prev) => {
-          if (date === today && !prev.completed.some((r) => r.date === date)) {
-            return { ...prev, swaps: { ...prev.swaps, [slot]: movementId } };
+          if (date >= today && !prev.completed.some((r) => r.date === date)) {
+            const phase = PHASES.indexOf(phaseForDay(daysBetween(prev.profile.programStartDate, date) + 1));
+            return {
+              ...prev,
+              swaps: { ...prev.swaps, [slot]: movementId },
+              swapScope: { ...prev.swapScope, [slot]: { scope, phase } },
+            };
           }
           return withRecord(prev, date, (r) => ({ ...r, movements: { ...r.movements, [slot]: movementId } }));
         }),
+
+      bestLifts: () => {
+        const firstSeen = new Map<string, number>();
+        const best = new Map<string, { lb: number; day: number }>();
+        for (const r of state.completed) {
+          for (const [id, raw] of Object.entries(r.weights)) {
+            const lb = parseFloat(raw);
+            if (!Number.isFinite(lb)) continue;
+            if (!firstSeen.has(id)) firstSeen.set(id, lb);
+            const b = best.get(id);
+            if (!b || lb > b.lb) best.set(id, { lb, day: r.day });
+          }
+        }
+        return [...best.entries()]
+          .map(([id, b]) => ({ movementId: id, name: movement(id).name, first: firstSeen.get(id) ?? b.lb, best: b.lb, bestDay: b.day }))
+          .sort((a, b) => b.best - b.first - (a.best - a.first) || a.name.localeCompare(b.name));
+      },
 
       toggleItem: (date, id) =>
         update((prev) => {
@@ -465,7 +507,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           const d = prev.draft?.date === today ? prev.draft : emptyDraft(today);
           const day = daysBetween(prev.profile.programStartDate, today) + 1;
           const opts = optionsFor(today, undefined);
-          const session = sessionForDay(day, prev.profile, prev.swaps, opts);
+          const session = sessionForDay(day, prev.profile, effectiveSwaps(day), opts);
           const weights: Record<string, string> = {};
           const movements: Record<string, string> = {};
           for (const ex of session.exercises ?? []) {
