@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState as RNAppState } from 'react-native';
 
+import { MILESTONES, type EarnedMilestone } from '@/data/milestones';
 import { syncNotifications } from '@/data/notifications';
 import { deletePhotoFile, type Photo } from '@/data/photos';
 import type { Profile } from '@/data/profile';
@@ -12,6 +13,7 @@ import {
   nextLoad,
   PHASES,
   phaseForDay,
+  PROGRAM_LENGTH_DAYS,
   resetLoad,
   sessionForDay,
   type ChecklistId,
@@ -122,6 +124,15 @@ type Onward = {
   setMovement: (date: string, slot: string, movementId: string, scope?: 'always' | 'phase') => void;
   /** Best logged weight per movement since Day 1, with the first weight for comparison */
   bestLifts: () => { movementId: string; name: string; first: number; best: number; bestDay: number }[];
+  /** Every milestone, with the date earned or null */
+  milestones: () => EarnedMilestone[];
+  /** Earned milestones whose card hasn't been shown yet */
+  newMilestones: () => EarnedMilestone[];
+  markMilestonesSeen: (ids: string[]) => void;
+  /** Days completed so far (day-completion rule), and this week's Mon–Sun completion */
+  progressStrip: () => { daysCompleted: number; week: number; weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest')[]; cameBack: boolean };
+  /** Numbers for a finished phase, for the recap card */
+  phaseRecap: (phaseIndex: number) => { sessionsDone: number; trainingDays: number; liftsUp: number; weightChange: number | null };
   toggleItem: (date: string, id: ChecklistId) => void;
   toggleShort: (date: string) => void;
   completeToday: () => void;
@@ -304,6 +315,77 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         if (lb) out.push({ date: r.date, day: r.day, lb, hit: r.hits?.[movementId] });
       }
       return out;
+    };
+
+    /** Which milestones are earned, and on what date. Derived from the data; never stored. */
+    const computeMilestones = (): EarnedMilestone[] => {
+      const counted = state.completed
+        .filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && dayCounts(sessionFor(r.day), r.checklist))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      const nth = (n: number) => counted[n - 1]?.date ?? null;
+      const todayDay = programDayFor(today);
+      const phaseEnd = (p: number) => (todayDay > PHASES[p].lastDay ? addDays(profile.programStartDate, PHASES[p].lastDay - 1) : null);
+
+      // First record logged after 3+ missed training days
+      let cameBack: string | null = null;
+      for (const r of state.completed) {
+        if (r.reentry && r.checklist.workout) { cameBack = r.date; break; }
+      }
+
+      // First time a movement beat its first logged weight
+      let firstPr: string | null = null;
+      const firstSeen = new Map<string, number>();
+      for (const r of state.completed) {
+        for (const [id, raw] of Object.entries(r.weights)) {
+          const lb = parseFloat(raw);
+          if (!Number.isFinite(lb)) continue;
+          const f = firstSeen.get(id);
+          if (f === undefined) firstSeen.set(id, lb);
+          else if (lb > f && !firstPr) firstPr = r.date;
+        }
+        if (firstPr) break;
+      }
+
+      // Weeks: all five habits on 5+ days; weeks with 2+ sessions
+      let fullWeek: string | null = null;
+      let momentumWeeks = 0, momentum: string | null = null;
+      for (let w = 0; w * 7 < PROGRAM_LENGTH_DAYS; w++) {
+        const start = addDays(profile.programStartDate, w * 7);
+        const end = addDays(start, 6);
+        if (end > today) break;
+        let fiveDays = 0, sessions = 0;
+        for (let i = 0; i < 7; i++) {
+          const r = recordFor(addDays(start, i));
+          if (!r) continue;
+          if (Object.values(r.checklist).filter(Boolean).length >= 5) fiveDays++;
+          if (r.checklist.workout) sessions++;
+        }
+        if (fiveDays >= 5 && !fullWeek) fullWeek = end;
+        if (sessions >= 2) { momentumWeeks++; if (momentumWeeks === 4 && !momentum) momentum = end; }
+      }
+
+      const firstWeighIn = Object.keys(state.bodyWeight).sort()[0] ?? null;
+      const firstPhotos = state.photos.map((p) => p.date).sort()[0] ?? null;
+      const shortDay = state.completed.find((r) => r.short && r.checklist.workout)?.date ?? null;
+
+      const earned: Record<string, string | null> = {
+        'first-day': nth(1),
+        'week-one': nth(7),
+        'came-back': cameBack,
+        rebuild: phaseEnd(0),
+        'days-25': nth(25),
+        build: phaseEnd(1),
+        'first-pr': firstPr,
+        'full-week': fullWeek,
+        'days-50': nth(50),
+        push: phaseEnd(2),
+        momentum,
+        'first-weigh-in': firstWeighIn,
+        'first-photos': firstPhotos,
+        'short-day': shortDay,
+        finish: todayDay > PROGRAM_LENGTH_DAYS ? addDays(profile.programStartDate, PROGRAM_LENGTH_DAYS - 1) : null,
+      };
+      return MILESTONES.map((m) => ({ ...m, earnedOn: earned[m.id] ?? null }));
     };
 
     const summarizeWeek = (weekStart: string, last: string) => {
@@ -504,6 +586,57 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           }
           return withRecord(prev, date, (r) => ({ ...r, movements: { ...r.movements, [slot]: movementId } }));
         }),
+
+      milestones: () => computeMilestones(),
+      newMilestones: () => computeMilestones().filter((m) => m.earnedOn && !state.seenMilestones.includes(m.id)),
+      markMilestonesSeen: (ids) =>
+        update((prev) => ({ ...prev, seenMilestones: [...new Set([...prev.seenMilestones, ...ids])] })),
+
+      progressStrip: () => {
+        const todayDay = programDayFor(today);
+        const start = weekStartOf(today);
+        const weekDots = Array.from({ length: 7 }, (_, i) => {
+          const d = addDays(start, i);
+          const n = programDayFor(d);
+          if (n < 1 || n > PROGRAM_LENGTH_DAYS) return 'future' as const;
+          const rec = recordFor(d);
+          if (rec && dayCounts(sessionFor(n), rec.checklist)) return 'done' as const;
+          if (d === today) return 'today' as const;
+          if (d > today) return 'future' as const;
+          return sessionFor(n).kind === 'rest' ? ('rest' as const) : ('missed' as const);
+        });
+        const daysCompleted = state.completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && dayCounts(sessionFor(r.day), r.checklist)).length;
+        return { daysCompleted, week: Math.floor((Math.min(todayDay, PROGRAM_LENGTH_DAYS) - 1) / 7) + 1, weekDots, cameBack: !!optionsFor(today, recordFor(today)).reentry };
+      },
+
+      phaseRecap: (p) => {
+        const phase = PHASES[p];
+        let sessionsDone = 0, trainingDays = 0;
+        const weights: number[] = [];
+        for (let day = phase.firstDay; day <= phase.lastDay; day++) {
+          const d = addDays(profile.programStartDate, day - 1);
+          if (d > today) break;
+          const s = sessionFor(day);
+          const r = recordFor(d);
+          if (s.kind !== 'rest') {
+            trainingDays++;
+            if (r?.checklist.workout) sessionsDone++;
+          }
+          const w = parseFloat(state.bodyWeight[d] ?? '');
+          if (Number.isFinite(w)) weights.push(w);
+        }
+        const inPhase = state.completed.filter((r) => r.day >= phase.firstDay && r.day <= phase.lastDay);
+        const firstIn = new Map<string, number>(), lastIn = new Map<string, number>();
+        for (const r of inPhase)
+          for (const [id, raw] of Object.entries(r.weights)) {
+            const lb = parseFloat(raw);
+            if (!Number.isFinite(lb)) continue;
+            if (!firstIn.has(id)) firstIn.set(id, lb);
+            lastIn.set(id, Math.max(lastIn.get(id) ?? 0, lb));
+          }
+        const liftsUp = [...firstIn.entries()].filter(([id, first]) => (lastIn.get(id) ?? 0) > first).length;
+        return { sessionsDone, trainingDays, liftsUp, weightChange: weights.length >= 2 ? Math.round((weights[weights.length - 1] - weights[0]) * 10) / 10 : null };
+      },
 
       bestLifts: () => {
         const firstSeen = new Map<string, number>();

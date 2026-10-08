@@ -56,6 +56,8 @@ export type AppState = {
   photos: Photo[];
   /** Daily check-in by date: how the day felt (1–5) and a free note */
   checkins: Record<string, Checkin>;
+  /** Milestone ids whose "earned" card has been shown */
+  seenMilestones: string[];
 };
 
 export type Checkin = { feel?: number; note?: string };
@@ -70,6 +72,7 @@ export const INITIAL_STATE: AppState = {
   bodyWeight: {},
   photos: [],
   checkins: {},
+  seenMilestones: [],
 };
 
 export async function loadState(): Promise<AppState> {

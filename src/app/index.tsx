@@ -5,6 +5,9 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIn } from '@/components/check-in';
+import { NewMilestoneCard } from '@/components/milestones';
+import { PhaseRecap } from '@/components/phase-recap';
+import { ProgressStrip } from '@/components/progress-strip';
 import { restSeconds, useRestTimer } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -69,6 +72,10 @@ export default function TodayScreen() {
             <ThemedText style={styles.navArrow}>›</ThemedText>
           </Pressable>
         </View>
+
+        {v.isToday && inProgram && <ProgressStrip day={v.day} kind={session.kind} />}
+        {v.isToday && inProgram && <NewMilestoneCard milestones={onward.newMilestones()} onDismiss={() => onward.markMilestonesSeen(onward.newMilestones().map((m) => m.id))} />}
+        {v.isToday && <PhaseRecap day={v.day} />}
 
         {!inProgram ? (
           <View style={styles.doneWrap}>

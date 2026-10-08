@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -16,7 +16,8 @@ export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
 
-  if (!visible) return null;
+  // Web has no native splash to blend with, and hideAsync never resolves there
+  if (Platform.OS === 'web' || !visible) return null;
 
   const fadeOut = new Keyframe({
     0: { opacity: 1 },
@@ -37,7 +38,11 @@ export function AnimatedSplashOverlay() {
   ) : (
     <View
       onLayout={() => {
-        SplashScreen.hideAsync().finally(() => setAnimate(true));
+        SplashScreen.hideAsync().finally(() => {
+          setAnimate(true);
+          // Belt and braces: the animation callback doesn't always fire on web
+          setTimeout(() => setVisible(false), DURATION + 100);
+        });
       }}
       style={styles.overlay}>
       {mark}

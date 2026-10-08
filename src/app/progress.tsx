@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FEEL_LABELS } from '@/components/check-in';
+import { MilestoneGrid } from '@/components/milestones';
 import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
@@ -150,6 +151,9 @@ export default function ProgressScreen() {
           <Stat label="Weeks with 2+ sessions" value={`${stats.goodWeeks}`} sub={`of ${stats.weeksSoFar} so far`} />
           <Stat label="Program" value={`Day ${Math.min(currentDay, PROGRAM_LENGTH_DAYS)}`} sub={`of ${PROGRAM_LENGTH_DAYS}`} />
         </View>
+
+        <ThemedText style={styles.sectionTitle}>Milestones</ThemedText>
+        <MilestoneGrid milestones={onward.milestones()} />
 
         <ThemedText style={styles.sectionTitle}>Body weight</ThemedText>
         <View style={[styles.card, styles.weightCard, { backgroundColor: theme.backgroundElement }]}>
