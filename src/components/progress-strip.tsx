@@ -39,7 +39,7 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
                   styles.dot,
                   d === 'done' && { backgroundColor: theme.accent, borderColor: theme.accent },
                   d === 'today' && { borderColor: theme.accent, borderWidth: 2 },
-                  d === 'rest' && { backgroundColor: theme.backgroundSelected, borderColor: theme.backgroundSelected },
+                  (d === 'rest' || d === 'paused') && { backgroundColor: theme.backgroundSelected, borderColor: theme.backgroundSelected },
                   (d === 'missed' || d === 'future') && { borderColor: theme.border },
                 ]}
               />
@@ -51,7 +51,7 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
         </View>
       </View>
       <ThemedText type="small" themeColor="textSecondary" style={styles.line}>
-        {dailyLine(day, kind, s.cameBack)}
+        {dailyLine(day, kind, s.line)}
       </ThemedText>
     </View>
   );

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState as RNAppState } from 'react-native';
 
+import type { LineContext } from '@/data/lines';
 import { MILESTONES, type EarnedMilestone } from '@/data/milestones';
 import { syncNotifications } from '@/data/notifications';
 import { deletePhotoFile, type Photo } from '@/data/photos';
@@ -31,6 +32,7 @@ import {
   type AppState,
   type Checkin,
   type DayRecord,
+  type StatusKind,
 } from '@/data/storage';
 
 function emptyDraft(date: string): NonNullable<AppState['draft']> {
@@ -130,7 +132,13 @@ type Onward = {
   newMilestones: () => EarnedMilestone[];
   markMilestonesSeen: (ids: string[]) => void;
   /** Days completed so far (day-completion rule), and this week's Mon–Sun completion */
-  progressStrip: () => { daysCompleted: number; week: number; weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest')[]; cameBack: boolean };
+  progressStrip: () => { daysCompleted: number; week: number; weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest' | 'paused')[]; line: LineContext };
+  status: AppState['status'];
+  setStatus: (kind: StatusKind | null) => void;
+  /** Whether a date fell inside a status (away/sick/injured) */
+  pausedOn: (date: string) => StatusKind | null;
+  /** What skipping today means, in plain numbers */
+  skipPreview: () => { tomorrow: Session; tomorrowDay: number; weekDone: number; weekTraining: number };
   /** Numbers for a finished phase, for the recap card */
   phaseRecap: (phaseIndex: number) => { sessionsDone: number; trainingDays: number; liftsUp: number; weightChange: number | null };
   toggleItem: (date: string, id: ChecklistId) => void;
@@ -168,10 +176,13 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
   // Keep the next two weeks of reminders scheduled (re-run whenever the data they describe changes)
   useEffect(() => {
     if (!loaded) return;
-    const t = setTimeout(() => syncNotifications(state.profile, value.sessionFor, value.weekSummary).catch(() => {}), 1500);
+    const t = setTimeout(
+      () => syncNotifications({ ...state.profile, notificationsEnabled: state.profile.notificationsEnabled && !state.status }, value.sessionFor, value.weekSummary).catch(() => {}),
+      1500
+    );
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, today, state.profile, state.swaps, state.swapScope, state.completed, state.bodyWeight]);
+  }, [loaded, today, state.profile, state.swaps, state.swapScope, state.completed, state.bodyWeight, state.status]);
 
   const update = useCallback((change: (prev: AppState) => AppState) => {
     setState((prev) => {
@@ -205,6 +216,12 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
     const weekStartOf = (date: string) => {
       const day = programDayFor(date);
       return addDays(date, -((day - 1 + 7000) % 7));
+    };
+
+    const pausedOn = (date: string): StatusKind | null => {
+      if (state.status && date >= state.status.since && date <= today) return state.status.kind;
+      const h = state.statusHistory.find((s) => date >= s.since && date < s.until);
+      return h?.kind ?? null;
     };
 
     /** Last date before `date` with a logged workout */
@@ -603,10 +620,62 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           if (rec && dayCounts(sessionFor(n), rec.checklist)) return 'done' as const;
           if (d === today) return 'today' as const;
           if (d > today) return 'future' as const;
+          if (pausedOn(d)) return 'paused' as const;
           return sessionFor(n).kind === 'rest' ? ('rest' as const) : ('missed' as const);
         });
         const daysCompleted = state.completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && dayCounts(sessionFor(r.day), r.checklist)).length;
-        return { daysCompleted, week: Math.floor((Math.min(todayDay, PROGRAM_LENGTH_DAYS) - 1) / 7) + 1, weekDots, cameBack: !!optionsFor(today, recordFor(today)).reentry };
+
+        // Context for the daily line
+        const yesterday = addDays(today, -1);
+        const yRec = recordFor(yesterday);
+        let prYesterday = false;
+        if (yRec) {
+          const firstSeen = new Map<string, number>();
+          for (const r of state.completed) {
+            if (r.date >= yesterday) break;
+            for (const [id, raw] of Object.entries(r.weights)) {
+              const lb = parseFloat(raw);
+              if (Number.isFinite(lb) && !firstSeen.has(id)) firstSeen.set(id, lb);
+            }
+          }
+          prYesterday = Object.entries(yRec.weights).some(([id, raw]) => {
+            const lb = parseFloat(raw);
+            const f = firstSeen.get(id);
+            return Number.isFinite(lb) && f !== undefined && lb > f;
+          });
+        }
+        const line: LineContext = {
+          cameBack: !!optionsFor(today, recordFor(today)).reentry,
+          status: state.status?.kind ?? null,
+          lowYesterday: (state.checkins[yesterday]?.feel ?? 3) <= 2,
+          prYesterday,
+        };
+        return { daysCompleted, week: Math.floor((Math.min(todayDay, PROGRAM_LENGTH_DAYS) - 1) / 7) + 1, weekDots, line };
+      },
+
+      status: state.status,
+      setStatus: (kind) =>
+        update((prev) => {
+          if (!kind) {
+            if (!prev.status) return prev;
+            return { ...prev, status: null, statusHistory: [...prev.statusHistory, { ...prev.status, until: today }] };
+          }
+          return { ...prev, status: { kind, since: prev.status?.since ?? today } };
+        }),
+      pausedOn,
+
+      skipPreview: () => {
+        const day = programDayFor(today);
+        const start = weekStartOf(today);
+        let weekDone = 0, weekTraining = 0;
+        for (let i = 0; i < 7; i++) {
+          const n = programDayFor(addDays(start, i));
+          if (n < 1 || n > PROGRAM_LENGTH_DAYS) continue;
+          if (sessionFor(n).kind === 'rest') continue;
+          weekTraining++;
+          if (recordFor(addDays(start, i))?.checklist.workout) weekDone++;
+        }
+        return { tomorrow: sessionFor(day + 1), tomorrowDay: day + 1, weekDone, weekTraining };
       },
 
       phaseRecap: (p) => {

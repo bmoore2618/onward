@@ -58,7 +58,13 @@ export type AppState = {
   checkins: Record<string, Checkin>;
   /** Milestone ids whose "earned" card has been shown */
   seenMilestones: string[];
+  /** "Not training for a while" status: pauses reminders and marks days as intentional */
+  status: { kind: StatusKind; since: string } | null;
+  /** Past statuses, so the calendar can show paused days after the user is back */
+  statusHistory: { kind: StatusKind; since: string; until: string }[];
 };
+
+export type StatusKind = 'away' | 'sick' | 'injured';
 
 export type Checkin = { feel?: number; note?: string };
 
@@ -73,6 +79,8 @@ export const INITIAL_STATE: AppState = {
   photos: [],
   checkins: {},
   seenMilestones: [],
+  status: null,
+  statusHistory: [],
 };
 
 export async function loadState(): Promise<AppState> {

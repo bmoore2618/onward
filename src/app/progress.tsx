@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-type DayStatus = 'future' | 'off-program' | 'full' | 'partial' | 'rest' | 'missed' | 'today';
+type DayStatus = 'future' | 'off-program' | 'full' | 'partial' | 'rest' | 'missed' | 'today' | 'paused';
 
 export default function ProgressScreen() {
   const theme = useTheme();
@@ -103,6 +103,7 @@ export default function ProgressScreen() {
     const session = sessionFor(day);
     const record = byDate.get(date);
     if (session.kind === 'rest') return 'rest';
+    if (!record && onward.pausedOn(date)) return 'paused';
     if (!record) return 'missed';
     const needed = checklistFor(session).length;
     const got = Object.values(record.checklist).filter(Boolean).length;
@@ -117,6 +118,7 @@ export default function ProgressScreen() {
       case 'partial':
         return { bg: theme.accentSoft, fg: theme.text };
       case 'rest':
+      case 'paused':
         return { bg: theme.backgroundSelected, fg: theme.textSecondary };
       case 'today':
         return { bg: 'transparent', fg: theme.text, border: theme.accent };
@@ -351,7 +353,9 @@ export default function ProgressScreen() {
               <>
                 {!selectedView.record && !selectedView.isToday && selectedView.session.kind !== 'rest' && (
                   <ThemedText type="small" themeColor="textSecondary">
-                    Not logged. Tap what you did that day.
+                    {onward.pausedOn(selected)
+                      ? `You were ${onward.pausedOn(selected)} that day. Nothing to catch up on.`
+                      : 'Not logged. Tap what you did that day.'}
                   </ThemedText>
                 )}
                 <View style={styles.chips}>

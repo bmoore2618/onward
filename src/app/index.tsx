@@ -8,6 +8,8 @@ import { CheckIn } from '@/components/check-in';
 import { NewMilestoneCard } from '@/components/milestones';
 import { PhaseRecap } from '@/components/phase-recap';
 import { ProgressStrip } from '@/components/progress-strip';
+import { SkipPreview } from '@/components/skip-preview';
+import { StatusSwitch } from '@/components/status-switch';
 import { restSeconds, useRestTimer } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
@@ -74,6 +76,7 @@ export default function TodayScreen() {
         </View>
 
         {v.isToday && inProgram && <ProgressStrip day={v.day} kind={session.kind} />}
+        {v.isToday && inProgram && onward.status && <StatusSwitch />}
         {v.isToday && inProgram && <NewMilestoneCard milestones={onward.newMilestones()} onDismiss={() => onward.markMilestonesSeen(onward.newMilestones().map((m) => m.id))} />}
         {v.isToday && <PhaseRecap day={v.day} />}
 
@@ -368,6 +371,8 @@ export default function TodayScreen() {
                     <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
                       Partial days count. Whatever you got done, log it and keep going.
                     </ThemedText>
+                    {session.kind !== 'rest' && <SkipPreview />}
+                    {!onward.status && <StatusSwitch />}
                   </>
                 )}
               </>
