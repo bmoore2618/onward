@@ -135,6 +135,8 @@ type Onward = {
   progressStrip: () => { daysCompleted: number; week: number; weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest' | 'paused')[]; line: LineContext };
   status: AppState['status'];
   setStatus: (kind: StatusKind | null) => void;
+  progressLayout: AppState['progressLayout'];
+  setProgressLayout: (layout: AppState['progressLayout']) => void;
   /** Whether a date fell inside a status (away/sick/injured) */
   pausedOn: (date: string) => StatusKind | null;
   /** What skipping today means, in plain numbers */
@@ -663,6 +665,9 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           return { ...prev, status: { kind, since: prev.status?.since ?? today } };
         }),
       pausedOn,
+
+      progressLayout: state.progressLayout,
+      setProgressLayout: (layout) => update((prev) => ({ ...prev, progressLayout: layout })),
 
       skipPreview: () => {
         const day = programDayFor(today);

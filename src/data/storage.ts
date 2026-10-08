@@ -62,7 +62,21 @@ export type AppState = {
   status: { kind: StatusKind; since: string } | null;
   /** Past statuses, so the calendar can show paused days after the user is back */
   statusHistory: { kind: StatusKind; since: string; until: string }[];
+  /** Order of the Progress tab's sections and which are hidden */
+  progressLayout: { id: ProgressSectionId; hidden?: boolean }[];
 };
+
+export type ProgressSectionId = 'stats' | 'milestones' | 'weight' | 'lifts' | 'photos' | 'habits' | 'calendar';
+
+export const DEFAULT_PROGRESS_LAYOUT: AppState['progressLayout'] = [
+  { id: 'stats' },
+  { id: 'milestones' },
+  { id: 'weight' },
+  { id: 'lifts' },
+  { id: 'photos' },
+  { id: 'habits' },
+  { id: 'calendar' },
+];
 
 export type StatusKind = 'away' | 'sick' | 'injured';
 
@@ -81,6 +95,7 @@ export const INITIAL_STATE: AppState = {
   seenMilestones: [],
   status: null,
   statusHistory: [],
+  progressLayout: DEFAULT_PROGRESS_LAYOUT,
 };
 
 export async function loadState(): Promise<AppState> {
@@ -106,6 +121,11 @@ export async function loadState(): Promise<AppState> {
     completed: (rest.completed ?? []).map((r) => ({ ...r, checklist: migrate(r.checklist) })),
     // Photos saved before poses existed count as "front"
     photos: (rest.photos ?? []).map((p) => ({ ...p, pose: p.pose ?? 'front' })),
+    // New sections get appended to a saved layout
+    progressLayout: [
+      ...(rest.progressLayout ?? []).filter((s) => DEFAULT_PROGRESS_LAYOUT.some((d) => d.id === s.id)),
+      ...DEFAULT_PROGRESS_LAYOUT.filter((d) => !(rest.progressLayout ?? []).some((s) => s.id === d.id)),
+    ],
     draft: rest.draft ? { ...rest.draft, checklist: migrate(rest.draft.checklist) } : null,
     profile: {
       ...DEFAULT_PROFILE,

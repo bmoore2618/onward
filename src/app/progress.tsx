@@ -1,16 +1,17 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FEEL_LABELS } from '@/components/check-in';
+import { LayoutEditor } from '@/components/layout-editor';
 import { MilestoneGrid } from '@/components/milestones';
 import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { CHECKLIST, checklistFor, dayCounts, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
-import { addDays, dateFromKey, todayKey, type DayRecord } from '@/data/storage';
+import { addDays, dateFromKey, todayKey, type DayRecord, type ProgressSectionId } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -140,11 +141,10 @@ export default function ProgressScreen() {
   const selectedDay = selected ? programDayFor(selected) : null;
   const selectedView = selected && selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.viewDay(selected) : null;
 
-  return (
-    <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ThemedText style={styles.heading}>Progress</ThemedText>
-
+  // Each section as a block, rendered in the user's saved order
+  const sections: Record<ProgressSectionId, React.ReactNode> = {
+    stats: (
+      <>
         <View style={styles.statRow}>
           <Stat label="Days completed" value={`${stats.daysCompleted}`} sub={`of ${elapsedDays} so far`} />
           <Stat label="Workout consistency" value={`${stats.consistency}%`} sub="of training days" />
@@ -153,10 +153,16 @@ export default function ProgressScreen() {
           <Stat label="Weeks with 2+ sessions" value={`${stats.goodWeeks}`} sub={`of ${stats.weeksSoFar} so far`} />
           <Stat label="Program" value={`Day ${Math.min(currentDay, PROGRAM_LENGTH_DAYS)}`} sub={`of ${PROGRAM_LENGTH_DAYS}`} />
         </View>
-
+      </>
+    ),
+    milestones: (
+      <>
         <ThemedText style={styles.sectionTitle}>Milestones</ThemedText>
         <MilestoneGrid milestones={onward.milestones()} />
-
+      </>
+    ),
+    weight: (
+      <>
         <ThemedText style={styles.sectionTitle}>Body weight</ThemedText>
         <View style={[styles.card, styles.weightCard, { backgroundColor: theme.backgroundElement }]}>
           <View style={styles.weightStats}>
@@ -194,8 +200,10 @@ export default function ProgressScreen() {
             Set your goal weight on the Settings tab.
           </ThemedText>
         </View>
-
-        {bestLifts.length > 0 && (
+      </>
+    ),
+    lifts:
+      bestLifts.length > 0 ? (
           <>
             <ThemedText style={styles.sectionTitle}>Strength since Day 1</ThemedText>
             <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
@@ -217,11 +225,15 @@ export default function ProgressScreen() {
               </ThemedText>
             </View>
           </>
-        )}
-
+        ) : null,
+    photos: (
+      <>
         <ThemedText style={styles.sectionTitle}>Progress photos</ThemedText>
         <ProgressPhotos />
-
+      </>
+    ),
+    habits: (
+      <>
         <ThemedText style={styles.sectionTitle}>Daily habits</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
           {stats.items.map((item, i) => {
@@ -246,7 +258,10 @@ export default function ProgressScreen() {
             </ThemedText>
           )}
         </View>
-
+      </>
+    ),
+    calendar: (
+      <>
         <View style={styles.monthHeader}>
           <Pressable onPress={() => setMonthOffset((o) => o - 1)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month">
             <ThemedText style={styles.monthArrow}>‹</ThemedText>
@@ -393,6 +408,22 @@ export default function ProgressScreen() {
             </Pressable>
           </View>
         )}
+      </>
+    ),
+  };
+
+  return (
+    <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <View style={styles.headingRow}>
+          <ThemedText style={styles.heading}>Progress</ThemedText>
+          <LayoutEditor />
+        </View>
+        {onward.progressLayout
+          .filter((s) => !s.hidden)
+          .map((s) => (
+            <Fragment key={s.id}>{sections[s.id]}</Fragment>
+          ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -446,6 +477,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   heading: { fontSize: 34, lineHeight: 40, fontWeight: 700 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { letterSpacing: 1 },
   statRow: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.two },
   stat: { flex: 1, borderRadius: 16, padding: Spacing.three, gap: Spacing.half },
