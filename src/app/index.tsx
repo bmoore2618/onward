@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIn } from '@/components/check-in';
-import { RestTimer, restSeconds } from '@/components/rest-timer';
+import { restSeconds, useRestTimer } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { WeekSummary } from '@/components/week-summary';
@@ -27,7 +27,7 @@ export default function TodayScreen() {
   const viewDate = nav.date;
   const setViewDate = (date: string) => setNav({ key: navKey, date });
   const [swapping, setSwapping] = useState<Exercise | null>(null);
-  const [timerKick, setTimerKick] = useState<{ seconds: number; nonce: number }>();
+  const rest = useRestTimer();
 
   if (!onward.loaded) {
     return <View style={[styles.fill, { backgroundColor: theme.background }]} />;
@@ -144,6 +144,36 @@ export default function TodayScreen() {
                     </ThemedText>
                     {ex.movement.weighted && editable && <LastLift movementId={ex.movement.id} beforeDate={viewDate} />}
                     {ex.movement.weighted && editable && (
+                      <View style={styles.setsRow}>
+                        {v.setWeightsFor(ex.movement.id, ex.sets).values.map((value, s) => {
+                          const { placeholder } = v.setWeightsFor(ex.movement.id, ex.sets);
+                          return (
+                            <View key={s} style={styles.setCol}>
+                              <ThemedText type="small" themeColor="textSecondary">
+                                Set {s + 1}
+                              </ThemedText>
+                              <View style={[styles.setBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                                <TextInput
+                                  value={value}
+                                  onChangeText={(t) => onward.setSetWeight(viewDate, ex.movement.id, s, t)}
+                                  placeholder={placeholder || '–'}
+                                  placeholderTextColor={theme.textSecondary}
+                                  keyboardType="decimal-pad"
+                                  returnKeyType="done"
+                                  maxLength={5}
+                                  style={[styles.setInput, { color: theme.text }]}
+                                  accessibilityLabel={`${ex.movement.name} set ${s + 1} weight in pounds`}
+                                />
+                              </View>
+                            </View>
+                          );
+                        })}
+                        <ThemedText type="small" themeColor="textSecondary" style={styles.unit}>
+                          {ex.movement.load === 'each' ? 'lb each' : 'lb'}
+                        </ThemedText>
+                      </View>
+                    )}
+                    {ex.movement.weighted && editable && (
                       <View style={styles.hitRow}>
                         <ThemedText type="small" themeColor="textSecondary">
                           All sets hit the top of the range?
@@ -173,16 +203,32 @@ export default function TodayScreen() {
                     )}
                     <View style={styles.exerciseLinks}>
                       {editable && v.isToday && session.kind === 'strength' && (
-                        <Pressable
-                          onPress={() => setTimerKick({ seconds: restSeconds(ex.rest), nonce: Date.now() })}
-                          hitSlop={8}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Start ${ex.rest} rest for ${ex.movement.name}`}
-                          style={[styles.restButton, { borderColor: theme.accent }]}>
-                          <ThemedText type="smallBold" style={{ color: theme.accent }}>
-                            Rest {ex.rest.replace('–', '-')}
-                          </ThemedText>
-                        </Pressable>
+                        rest.activeId === ex.movement.id ? (
+                          <Pressable
+                            onPress={rest.stop}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Stop rest timer"
+                            style={[styles.restButton, styles.restRunning, { backgroundColor: theme.accent, borderColor: theme.accent }]}>
+                            <ThemedText type="smallBold" style={[styles.restClock, { color: theme.accentText }]}>
+                              {rest.label}
+                            </ThemedText>
+                            <ThemedText type="small" style={{ color: theme.accentText, opacity: 0.85 }}>
+                              tap to stop
+                            </ThemedText>
+                          </Pressable>
+                        ) : (
+                          <Pressable
+                            onPress={() => rest.start(ex.movement.id, restSeconds(ex.rest))}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Start ${ex.rest} rest for ${ex.movement.name}`}
+                            style={[styles.restButton, { borderColor: theme.accent }]}>
+                            <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                              Rest {ex.rest.replace('–', '-')}
+                            </ThemedText>
+                          </Pressable>
+                        )
                       )}
                       {editable && (
                         <Pressable onPress={() => setSwapping(ex)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Swap ${ex.movement.name}`}>
@@ -200,24 +246,6 @@ export default function TodayScreen() {
                       )}
                     </View>
                   </View>
-                  {ex.movement.weighted && editable && (
-                    <View style={[styles.weightBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
-                      <TextInput
-                        value={v.weightFor(ex.movement.id)}
-                        onChangeText={(t) => onward.setWeight(viewDate, ex.movement.id, t)}
-                        placeholder="–"
-                        placeholderTextColor={theme.textSecondary}
-                        keyboardType="decimal-pad"
-                        returnKeyType="done"
-                        maxLength={5}
-                        style={[styles.weightInput, { color: theme.text }]}
-                        accessibilityLabel={`${ex.movement.name} weight in pounds`}
-                      />
-                      <ThemedText type="small" themeColor="textSecondary">
-                        lb
-                      </ThemedText>
-                    </View>
-                  )}
                 </View>
               ))}
               {session.blocks?.map((block, i) => (
@@ -346,8 +374,6 @@ export default function TodayScreen() {
           </>
         )}
 
-        {v.isToday && session.kind === 'strength' && <RestTimer kick={timerKick} />}
-
         <SwapPicker
           exercise={swapping}
           phaseName={phaseForDay(v.day).name}
@@ -403,6 +429,13 @@ const styles = StyleSheet.create({
   },
   exerciseText: { flex: 1, gap: Spacing.half },
   hitRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.one, marginTop: Spacing.half },
+  setsRow: { flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
+  setCol: { gap: 2, alignItems: 'center' },
+  setBox: { borderWidth: 1, borderRadius: 10, height: 44, width: 60, justifyContent: 'center', paddingHorizontal: Spacing.one },
+  setInput: { fontSize: 18, fontWeight: 600, textAlign: 'center' },
+  unit: { paddingBottom: Spacing.three },
+  restRunning: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  restClock: { fontVariant: ['tabular-nums'] },
   hitChip: { borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 32, justifyContent: 'center' },
   infoCard: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half },
   shortToggle: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half, minHeight: 56 },

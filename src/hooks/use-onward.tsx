@@ -48,6 +48,8 @@ export type DayView = {
   /** Working checklist: the record's, or today's draft */
   checklist: DayRecord['checklist'];
   weightFor: (movementId: string) => string;
+  /** Per-set weights as typed (padded to `sets`), plus the value to grey in for blank sets */
+  setWeightsFor: (movementId: string, sets: number) => { values: string[]; placeholder: string };
   hitFor: (movementId: string) => 'hit' | 'miss' | undefined;
   short: boolean;
   bodyWeight: string;
@@ -113,6 +115,8 @@ type Onward = {
   setBodyWeight: (date: string, value: string) => void;
   /** Edits apply to today's draft, or to the saved record for any other day */
   setWeight: (date: string, movementId: string, value: string) => void;
+  /** Weight for one set; the movement's working weight becomes the heaviest set entered */
+  setSetWeight: (date: string, movementId: string, index: number, value: string) => void;
   setHit: (date: string, movementId: string, hit: 'hit' | 'miss' | null) => void;
   /** Swap a slot. On today/future the scope says whether it outlives the current phase. */
   setMovement: (date: string, slot: string, movementId: string, scope?: 'always' | 'phase') => void;
@@ -277,6 +281,13 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
             : isToday
               ? (draft.weights[movementId] ?? state.lastWeights[movementId] ?? '')
               : '',
+        setWeightsFor: (movementId, sets) => {
+          const raw = record ? record.setWeights?.[movementId] : isToday ? draft.setWeights?.[movementId] : undefined;
+          const values = Array.from({ length: sets }, (_, i) => raw?.[i] ?? '');
+          const firstTyped = values.find((v) => v.trim()) ?? '';
+          const placeholder = firstTyped || (record ? (record.weights[movementId] ?? '') : isToday ? (state.lastWeights[movementId] ?? '') : '');
+          return { values, placeholder };
+        },
         hitFor: (movementId) => (record ? record.hits?.[movementId] : isToday ? draft.hits?.[movementId] : undefined),
         short: !!opts.short,
         bodyWeight: state.bodyWeight[date] ?? '',
@@ -439,6 +450,33 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           return v.trim() ? { ...next, lastWeights: { ...next.lastWeights, [movementId]: v.trim() } } : next;
         }),
 
+      setSetWeight: (date, movementId, index, v) =>
+        update((prev) => {
+          const clean = v.replace(/[^0-9.]/g, '');
+          const apply = (sw: Record<string, string[]> | undefined) => {
+            const arr = [...(sw?.[movementId] ?? [])];
+            while (arr.length <= index) arr.push('');
+            arr[index] = clean;
+            return { ...sw, [movementId]: arr };
+          };
+          // Working weight = heaviest set typed so far
+          const working = (arr: string[]) => {
+            const nums = arr.map(parseFloat).filter(Number.isFinite);
+            return nums.length ? String(Math.max(...nums)) : '';
+          };
+          if (date === today && !prev.completed.some((r) => r.date === date)) {
+            const d = prev.draft?.date === today ? prev.draft : emptyDraft(today);
+            const setWeights = apply(d.setWeights);
+            return { ...prev, draft: { ...d, setWeights, weights: { ...d.weights, [movementId]: working(setWeights[movementId]) } } };
+          }
+          const next = withRecord(prev, date, (r) => {
+            const setWeights = apply(r.setWeights);
+            return { ...r, setWeights, weights: { ...r.weights, [movementId]: working(setWeights[movementId]) } };
+          });
+          const w = next.completed.find((r) => r.date === date)?.weights[movementId];
+          return w ? { ...next, lastWeights: { ...next.lastWeights, [movementId]: w } } : next;
+        }),
+
       setHit: (date, movementId, hit) =>
         update((prev) => {
           const apply = (hits: Record<string, 'hit' | 'miss'> | undefined) => {
@@ -521,6 +559,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
             sessionId: session.id,
             checklist: d.checklist,
             weights,
+            setWeights: d.setWeights,
             movements,
             hits: d.hits,
             short: d.short,
@@ -542,7 +581,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           return {
             ...prev,
             completed: prev.completed.filter((r) => r.date !== today),
-            draft: { date: today, checklist: rec.checklist, weights: rec.weights, hits: rec.hits, short: rec.short },
+            draft: { date: today, checklist: rec.checklist, weights: rec.weights, setWeights: rec.setWeights, hits: rec.hits, short: rec.short },
           };
         }),
     };

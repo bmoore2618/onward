@@ -94,10 +94,34 @@ export type Movement = {
   name: string;
   /** Whether to show a weight field */
   weighted: boolean;
+  /** "each" = a pair of dumbbells, logged as the weight of one; otherwise the total load */
+  load?: 'each' | 'total';
   videoUrl?: string;
   /** Short coaching cue shown under the name */
   cue?: string;
 };
+
+/** Movements done with a pair of dumbbells, where the logged weight is per dumbbell */
+const PAIR_OF_DUMBBELLS = new Set([
+  'db-front-squat',
+  'incline-db-bench',
+  'flat-db-bench',
+  'floor-press',
+  'seated-db-press',
+  'chest-supported-row',
+  'db-rdl',
+  'db-step-up',
+  'reverse-lunge',
+  'walking-lunge',
+  'split-squat',
+  'bulgarian-split-squat',
+  'farmer-carry',
+  'db-curl',
+  'hammer-curl',
+  'lateral-raise',
+  'front-raise',
+  'db-skull-crusher',
+]);
 
 const M = {
   // Squat pattern
@@ -256,7 +280,15 @@ const VIDEOS: Partial<Record<MovementId, string>> = {
 export const MOVEMENTS: Record<MovementId, Movement> = Object.fromEntries(
   Object.entries(M).map(([id, m]) => {
     const video = VIDEOS[id as MovementId];
-    return [id, { id, ...m, ...(video ? { videoUrl: `https://www.youtube.com/watch?v=${video}` } : {}) }];
+    return [
+      id,
+      {
+        id,
+        ...m,
+        ...(m.weighted ? { load: PAIR_OF_DUMBBELLS.has(id) ? 'each' : 'total' } : {}),
+        ...(video ? { videoUrl: `https://www.youtube.com/watch?v=${video}` } : {}),
+      },
+    ];
   })
 ) as Record<MovementId, Movement>;
 

@@ -16,7 +16,10 @@ export type DayRecord = {
   date: string;
   sessionId: string;
   checklist: Checklist;
+  /** Working weight per movement (the heaviest set), used for suggestions and bests */
   weights: Weights;
+  /** Weight typed for each set, per movement; "" for sets left blank */
+  setWeights?: Record<string, string[]>;
   /** Which movement was done in each slot, when it differs from the default */
   movements?: Record<string, string>;
   /** Per movement: did every set reach the top of the rep range? */
@@ -35,7 +38,14 @@ export type AppState = {
   /** Most recent weight used per movement, to pre-fill next time */
   lastWeights: Weights;
   /** Today's in-progress ticks and weights, so closing the app loses nothing */
-  draft: { date: string; checklist: Checklist; weights: Weights; hits?: Record<string, 'hit' | 'miss'>; short?: boolean } | null;
+  draft: {
+    date: string;
+    checklist: Checklist;
+    weights: Weights;
+    setWeights?: Record<string, string[]>;
+    hits?: Record<string, 'hit' | 'miss'>;
+    short?: boolean;
+  } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;
   /** How long a swap lasts: always, or only for the phase it was made in (phase index) */
