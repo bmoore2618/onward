@@ -66,6 +66,12 @@
         "projectId": "8a7798cf-df46-4d49-9500-e6a4f434ca26"
       }
     },
-    "owner": "bmoore2618"
+    "owner": "bmoore2618",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8a7798cf-df46-4d49-9500-e6a4f434ca26"
+    }
   }
 }
