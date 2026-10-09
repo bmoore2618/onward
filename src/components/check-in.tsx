@@ -57,8 +57,8 @@ export function CheckIn({ date }: { date: string }) {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.two },
-  scale: { flexDirection: 'row', gap: Spacing.one, marginTop: Spacing.one },
-  option: { flex: 1, minHeight: 56, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  scale: { flexDirection: 'row', gap: Spacing.one, marginTop: Spacing.one, flexWrap: 'wrap' },
+  option: { flex: 1, minWidth: 50, minHeight: 56, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2 },
   optionNumber: { fontSize: 18, fontWeight: 700 },
   note: { borderWidth: 1, borderRadius: 12, padding: Spacing.two, minHeight: 72, fontSize: 16, lineHeight: 22, textAlignVertical: 'top', marginTop: Spacing.one },
 });

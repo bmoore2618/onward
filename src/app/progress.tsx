@@ -8,11 +8,11 @@ import { LayoutEditor } from '@/components/layout-editor';
 import { MilestoneGrid } from '@/components/milestones';
 import { MOVED_LABELS } from '@/components/moved-anyway';
 import { ProgressPhotos } from '@/components/progress-photos';
-import { ThemedText } from '@/components/themed-text';
+import { MAX_FONT_SCALE, ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { CHECKLIST, checklistFor, dayCounts, movement, PROGRAM_LENGTH_DAYS } from '@/data/program';
-import { addDays, dateFromKey, todayKey, type DayRecord, type ProgressSectionId } from '@/data/storage';
+import { addDays, dateFromKey, spokenDate, todayKey, type DayRecord, type ProgressSectionId } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -20,6 +20,16 @@ const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 type DayStatus = 'future' | 'off-program' | 'full' | 'partial' | 'rest' | 'missed' | 'today' | 'paused';
+const STATUS_WORDS: Record<DayStatus, string> = {
+  future: 'coming up',
+  'off-program': 'outside the program',
+  full: 'complete',
+  partial: 'partial',
+  rest: 'rest day',
+  missed: 'not logged',
+  today: 'today',
+  paused: 'break',
+};
 
 export default function ProgressScreen() {
   const theme = useTheme();
@@ -190,6 +200,7 @@ export default function ProgressScreen() {
                 keyboardType="decimal-pad"
                 returnKeyType="done"
                 maxLength={6}
+                maxFontSizeMultiplier={MAX_FONT_SCALE}
                 style={[styles.weightInput, { color: theme.text }]}
                 accessibilityLabel="Today's body weight in pounds"
               />
@@ -210,7 +221,11 @@ export default function ProgressScreen() {
             <ThemedText style={styles.sectionTitle}>Strength since Day 1</ThemedText>
             <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
               {bestLifts.map((l, i) => (
-                <View key={l.movementId} style={[styles.detailRow, styles.liftRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+                <View
+                  key={l.movementId}
+                  accessible
+                  accessibilityLabel={`${l.name}: best ${l.best} pounds on day ${l.bestDay}${l.best > l.first ? `, up ${Math.round((l.best - l.first) * 10) / 10} pounds since Day 1` : ''}`}
+                  style={[styles.detailRow, styles.liftRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
                   <View style={styles.detailName}>
                     <ThemedText>{l.name}</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
@@ -241,7 +256,13 @@ export default function ProgressScreen() {
           {stats.items.map((item, i) => {
             const pct = item.of ? item.done / item.of : 0;
             return (
-              <View key={item.id} style={[styles.habitRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+              <View
+                key={item.id}
+                accessible
+                accessibilityRole="progressbar"
+                accessibilityLabel={`${item.label}: ${item.done} of ${item.of} days`}
+                accessibilityValue={{ min: 0, max: item.of || 1, now: item.done }}
+                style={[styles.habitRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
                 <View style={styles.habitHeader}>
                   <ThemedText>{item.label}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
@@ -265,19 +286,19 @@ export default function ProgressScreen() {
     calendar: (
       <>
         <View style={styles.monthHeader}>
-          <Pressable onPress={() => setMonthOffset((o) => o - 1)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month">
+          <Pressable onPress={() => setMonthOffset((o) => o - 1)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month" style={styles.monthButton}>
             <ThemedText style={styles.monthArrow}>‹</ThemedText>
           </Pressable>
-          <ThemedText style={styles.sectionTitleInline}>
+          <ThemedText style={styles.sectionTitleInline} accessibilityRole="header">
             {MONTHS[monthStart.getMonth()]} {monthStart.getFullYear()}
           </ThemedText>
-          <Pressable onPress={() => setMonthOffset((o) => o + 1)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next month">
+          <Pressable onPress={() => setMonthOffset((o) => o + 1)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next month" style={styles.monthButton}>
             <ThemedText style={styles.monthArrow}>›</ThemedText>
           </Pressable>
         </View>
 
         <View style={[styles.card, styles.calendar, { backgroundColor: theme.backgroundElement }]}>
-          <View style={styles.weekRow}>
+          <View style={styles.weekRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             {WEEKDAYS.map((d, i) => (
               <ThemedText key={i} type="smallBold" themeColor="textSecondary" style={styles.weekday}>
                 {d}
@@ -297,7 +318,8 @@ export default function ProgressScreen() {
                     key={date}
                     onPress={() => setSelected(date)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${date}, ${status}`}
+                    accessibilityLabel={`${spokenDate(date)}, ${STATUS_WORDS[status]}`}
+                    accessibilityState={{ selected: isSelected }}
                     style={styles.cell}>
                     <View
                       style={[
@@ -306,14 +328,16 @@ export default function ProgressScreen() {
                         c.border && { borderColor: c.border, borderWidth: 2 },
                         isSelected && { borderColor: theme.text, borderWidth: 2 },
                       ]}>
-                      <ThemedText style={[styles.cellText, { color: c.fg }]}>{dayOfMonth}</ThemedText>
+                      <ThemedText style={[styles.cellText, { color: c.fg }]} maxFontSizeMultiplier={1.5}>
+                        {dayOfMonth}
+                      </ThemedText>
                     </View>
                   </Pressable>
                 );
               })}
             </View>
           ))}
-          <View style={styles.legend}>
+          <View style={styles.legend} accessible accessibilityLabel="Legend: green is complete, light green is partial, grey is rest">
             <Legend color={theme.accent} label="Complete" />
             <Legend color={theme.accentSoft} label="Partial" />
             <Legend color={theme.backgroundSelected} label="Rest" />
@@ -389,6 +413,7 @@ export default function ProgressScreen() {
                         key={item.id}
                         onPress={() => onward.toggleItem(selected, item.id)}
                         accessibilityRole="checkbox"
+                        accessibilityLabel={item.label}
                         accessibilityState={{ checked: on }}
                         style={({ pressed }) => [
                           styles.chip,
@@ -424,7 +449,9 @@ export default function ProgressScreen() {
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.headingRow}>
-          <ThemedText style={styles.heading}>Progress</ThemedText>
+          <ThemedText style={styles.heading} accessibilityRole="header">
+            Progress
+          </ThemedText>
           <LayoutEditor />
         </View>
         {onward.progressLayout
@@ -440,7 +467,7 @@ export default function ProgressScreen() {
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   const theme = useTheme();
   return (
-    <View style={[styles.stat, { backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.stat, { backgroundColor: theme.backgroundElement }]} accessible accessibilityLabel={`${label}: ${value} ${sub}`}>
       <ThemedText style={styles.statValue}>{value}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {sub}
@@ -454,7 +481,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
 
 function WeightStat({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.weightStat}>
+    <View style={styles.weightStat} accessible accessibilityLabel={`${label}: ${value === '–' ? 'not set' : `${value} pounds`}`}>
       <ThemedText type="small" themeColor="textSecondary">
         {label}
       </ThemedText>
@@ -487,16 +514,16 @@ const styles = StyleSheet.create({
   heading: { fontSize: 34, lineHeight: 40, fontWeight: 700 },
   headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   eyebrow: { letterSpacing: 1 },
-  statRow: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.two },
-  stat: { flex: 1, borderRadius: 16, padding: Spacing.three, gap: Spacing.half },
+  statRow: { flexDirection: 'row', gap: Spacing.three, marginTop: Spacing.two, flexWrap: 'wrap' },
+  stat: { flex: 1, minWidth: 140, borderRadius: 16, padding: Spacing.three, gap: Spacing.half },
   statValue: { fontSize: 32, lineHeight: 38, fontWeight: 700 },
   statLabel: { marginTop: Spacing.one },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   sectionTitleInline: { fontSize: 20, lineHeight: 28, fontWeight: 700 },
   card: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.three },
   weightCard: { paddingVertical: Spacing.three, gap: Spacing.three },
-  weightStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  weightStat: { flex: 1, gap: Spacing.half },
+  weightStats: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: Spacing.two },
+  weightStat: { flex: 1, minWidth: 72, gap: Spacing.half },
   weightStatValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
   logRow: {
     flexDirection: 'row',
@@ -512,15 +539,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: Spacing.two,
-    height: 44,
+    minHeight: 44,
   },
-  weightInput: { width: 64, fontSize: 18, fontWeight: 600, textAlign: 'right' },
+  weightInput: { minWidth: 64, fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
   habitRow: { paddingVertical: Spacing.three, gap: Spacing.two },
   habitHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bar: { height: 8, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
   emptyNote: { paddingVertical: Spacing.three },
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.four },
+  monthButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   monthArrow: { fontSize: 32, lineHeight: 36, paddingHorizontal: Spacing.three },
   calendar: { paddingVertical: Spacing.three, paddingHorizontal: Spacing.two },
   weekRow: { flexDirection: 'row' },

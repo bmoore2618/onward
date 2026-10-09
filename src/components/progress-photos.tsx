@@ -212,7 +212,7 @@ function SessionEditor({ date, existing, onClose }: { date: string | null; exist
               keyboardType="numbers-and-punctuation"
               returnKeyType="done"
               maxLength={10}
-              style={[styles.dateInput, { color: dateDraft && !dateValid ? '#C0392B' : theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+              style={[styles.dateInput, { color: dateDraft && !dateValid ? theme.danger : theme.text, borderColor: dateDraft && !dateValid ? theme.danger : theme.border, backgroundColor: theme.background }]}
               accessibilityLabel="Session date"
             />
           </View>
@@ -252,7 +252,7 @@ function SessionEditor({ date, existing, onClose }: { date: string | null; exist
           </Pressable>
           {!isNew && (
             <Pressable onPress={removeAll} accessibilityRole="button" style={styles.cancel}>
-              <ThemedText style={{ color: '#C0392B' }}>Delete session</ThemedText>
+              <ThemedText style={{ color: theme.danger }}>Delete session</ThemedText>
             </Pressable>
           )}
         </ScrollView>
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   editorTitle: { fontSize: 28, lineHeight: 34, fontWeight: 700 },
   field: { borderRadius: 16, padding: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   fieldText: { flex: 1, gap: 2 },
-  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44, width: 132, fontSize: 16, fontWeight: 600, textAlign: 'center' },
+  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44, minWidth: 132, fontSize: 16, fontWeight: 600, textAlign: 'center', paddingVertical: Spacing.one },
   slot: { flex: 1, gap: Spacing.one },
   slotActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.two },
   viewerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.three },

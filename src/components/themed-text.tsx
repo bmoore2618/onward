@@ -8,11 +8,18 @@ export type ThemedTextProps = TextProps & {
   themeColor?: ThemeColor;
 };
 
+/**
+ * Dynamic Type is honoured everywhere, but capped at 2x so the biggest
+ * accessibility sizes still fit on screen (a 34 pt heading becomes 68 pt).
+ */
+export const MAX_FONT_SCALE = 2;
+
 export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
   const theme = useTheme();
 
   return (
     <Text
+      maxFontSizeMultiplier={MAX_FONT_SCALE}
       style={[
         { color: theme[themeColor ?? 'text'] },
         type === 'default' && styles.default,

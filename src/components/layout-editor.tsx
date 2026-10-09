@@ -45,8 +45,8 @@ export function LayoutEditor() {
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close" />
-        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel="Close" />
+        <View style={[styles.sheet, { backgroundColor: theme.background }]} accessibilityViewIsModal>
           <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
             PROGRESS TAB
           </ThemedText>
@@ -55,10 +55,10 @@ export function LayoutEditor() {
             {layout.map((s, i) => (
               <View key={s.id} style={[styles.row, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
                 <ThemedText style={[styles.name, s.hidden && { color: theme.textSecondary }]}>{SECTION_TITLES[s.id]}</ThemedText>
-                <Pressable onPress={() => move(i, -1)} disabled={i === 0} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Move ${SECTION_TITLES[s.id]} up`} style={[styles.arrow, i === 0 && { opacity: 0.3 }]}>
+                <Pressable onPress={() => move(i, -1)} disabled={i === 0} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Move ${SECTION_TITLES[s.id]} up`} accessibilityState={{ disabled: i === 0 }} style={[styles.arrow, i === 0 && { opacity: 0.3 }]}>
                   <ThemedText style={styles.arrowText}>↑</ThemedText>
                 </Pressable>
-                <Pressable onPress={() => move(i, 1)} disabled={i === layout.length - 1} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Move ${SECTION_TITLES[s.id]} down`} style={[styles.arrow, i === layout.length - 1 && { opacity: 0.3 }]}>
+                <Pressable onPress={() => move(i, 1)} disabled={i === layout.length - 1} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Move ${SECTION_TITLES[s.id]} down`} accessibilityState={{ disabled: i === layout.length - 1 }} style={[styles.arrow, i === layout.length - 1 && { opacity: 0.3 }]}>
                   <ThemedText style={styles.arrowText}>↓</ThemedText>
                 </Pressable>
                 <Switch value={!s.hidden} onValueChange={() => toggle(i)} trackColor={{ true: theme.accent }} accessibilityLabel={`Show ${SECTION_TITLES[s.id]}`} />
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   list: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.two },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: 56 },
   name: { flex: 1 },
-  arrow: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  arrow: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 20, fontWeight: 700 },
   actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: Spacing.three },
   textButton: { minHeight: 44, justifyContent: 'center' },

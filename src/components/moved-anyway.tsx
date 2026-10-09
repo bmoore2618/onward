@@ -39,8 +39,9 @@ export function MovedAnyway({ date }: { date: string }) {
             <Pressable
               key={k.id}
               onPress={() => onward.setMovedAnyway(date, on ? null : { kind: k.id, minutes: moved?.minutes })}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: on }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={`Moved anyway: ${k.label}`}
               style={[styles.chip, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
               <ThemedText type="smallBold" style={{ color: on ? theme.accentText : theme.textSecondary }}>
                 {k.label}
@@ -81,6 +82,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, minHeight: 40, justifyContent: 'center' },
   minutesRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
-  box: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44 },
-  input: { width: 48, fontSize: 18, fontWeight: 600, textAlign: 'right' },
+  box: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44 },
+  input: { minWidth: 48, fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
 });

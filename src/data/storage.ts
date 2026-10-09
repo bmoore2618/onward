@@ -162,6 +162,11 @@ export function dateFromKey(key: string): Date {
   return new Date(`${key}T00:00:00`);
 }
 
+/** "Thursday, October 9" — for screen-reader labels, never "2026-10-09" */
+export function spokenDate(key: string): string {
+  return dateFromKey(key).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 export function isValidDateKey(key: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(key) && !Number.isNaN(dateFromKey(key).getTime()) && todayKey(dateFromKey(key)) === key;
 }

@@ -8,6 +8,8 @@ import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DOT_WORDS: Record<string, string> = { done: 'done', today: 'today', rest: 'rest', paused: 'break', missed: 'not logged', future: 'coming up' };
 
 /** The "home" strip at the top of Today: where you are, this week, and one line */
 export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind }) {
@@ -19,26 +21,29 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
   return (
     <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
       <View style={styles.row}>
-        <View style={styles.stat}>
+        <View style={styles.stat} accessible accessibilityLabel={`${s.daysCompleted} days done`}>
           <ThemedText style={styles.big}>{s.daysCompleted}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             days done
           </ThemedText>
         </View>
-        <View style={styles.stat}>
+        <View style={styles.stat} accessible accessibilityLabel={`Week ${s.week} of ${weeks}`}>
           <ThemedText style={styles.big}>{s.week}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             of {weeks} weeks
           </ThemedText>
         </View>
-        <View style={styles.stat}>
+        <View
+          style={styles.stat}
+          accessible
+          accessibilityLabel={`${s.fullWeeks} full ${s.fullWeeks === 1 ? 'week' : 'weeks'}${s.bestRun > 1 ? `, current run ${s.currentRun}` : ''}`}>
           <ThemedText style={styles.big}>{s.fullWeeks}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             full {s.fullWeeks === 1 ? 'week' : 'weeks'}
             {s.bestRun > 1 ? ` · run ${s.currentRun}` : ''}
           </ThemedText>
         </View>
-        <View style={styles.dots} accessibilityLabel="This week">
+        <View style={styles.dots} accessible accessibilityLabel={`This week: ${s.weekDots.map((d, i) => `${DAY_NAMES[i]} ${DOT_WORDS[d] ?? d}`).join(', ')}`}>
           {s.weekDots.map((d, i) => (
             <View key={i} style={styles.dotCol}>
               <View
@@ -67,10 +72,10 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
 
 const styles = StyleSheet.create({
   card: { borderRadius: 16, padding: Spacing.three, gap: Spacing.two, marginBottom: Spacing.two },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flexWrap: 'wrap' },
   stat: { alignItems: 'flex-start', minWidth: 56 },
   big: { fontSize: 26, lineHeight: 30, fontWeight: 800 },
-  dots: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
+  dots: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', minWidth: 160 },
   dotCol: { alignItems: 'center', gap: 2 },
   dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },
   dotLabel: { fontSize: 11, lineHeight: 14 },

@@ -62,7 +62,7 @@ export function WeekSummary({ date }: { date: string }) {
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <View style={styles.stat}>
+    <View style={styles.stat} accessible accessibilityLabel={`${value} ${label}`}>
       <ThemedText style={styles.statValue}>{value}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {label}
@@ -74,7 +74,7 @@ function Stat({ value, label }: { value: string; label: string }) {
 const styles = StyleSheet.create({
   card: { borderRadius: 16, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.two },
   eyebrow: { letterSpacing: 1 },
-  stats: { flexDirection: 'row', justifyContent: 'space-between' },
-  stat: { flex: 1, gap: 2 },
+  stats: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', rowGap: Spacing.two },
+  stat: { flex: 1, minWidth: 72, gap: 2 },
   statValue: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
 });

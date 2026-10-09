@@ -53,8 +53,8 @@ export function StatusSwitch() {
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close" />
-        <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel="Close" />
+        <View style={[styles.sheet, { backgroundColor: theme.background }]} accessibilityViewIsModal>
           <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
             STATUS
           </ThemedText>
@@ -71,6 +71,7 @@ export function StatusSwitch() {
                   setOpen(false);
                 }}
                 accessibilityRole="button"
+                accessibilityLabel={`${o.label}. ${o.hint}`}
                 style={({ pressed }) => [styles.row, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }, pressed && { opacity: 0.6 }]}>
                 <ThemedText>{o.label}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
+import { MAX_FONT_SCALE, ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { backupSummary, exportBackup, restoreBackup } from '@/data/backup';
 import type { CardioMode, Equipment, Limitation } from '@/data/profile';
@@ -57,7 +57,9 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <ThemedText style={styles.heading}>Settings</ThemedText>
+        <ThemedText style={styles.heading} accessibilityRole="header">
+          Settings
+        </ThemedText>
 
         <ThemedText style={styles.sectionTitle}>You</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
@@ -69,6 +71,7 @@ export default function SettingsScreen() {
               placeholderTextColor={theme.textSecondary}
               autoCapitalize="words"
               returnKeyType="done"
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
               style={[styles.dateInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
               accessibilityLabel="First name"
             />
@@ -106,7 +109,7 @@ export default function SettingsScreen() {
           </View>
           <Divider />
           <Row label="Punching bag" hint="Offers bag rounds on Saturday conditioning">
-            <Switch value={profile.hasHeavyBag} onValueChange={(on) => setProfile({ hasHeavyBag: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Punching bag" />
+            <Switch value={profile.hasHeavyBag} onValueChange={(on) => setProfile({ hasHeavyBag: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Punching bag" accessibilityHint="Offers bag rounds on Saturday conditioning" />
           </Row>
         </View>
 
@@ -121,7 +124,7 @@ export default function SettingsScreen() {
             <View key={l.id}>
               <Divider />
               <Row label={l.label} hint={l.hint}>
-                <Switch value={profile.limitations.includes(l.id)} onValueChange={() => toggleLimitation(l.id)} trackColor={{ true: theme.accent }} accessibilityLabel={l.label} />
+                <Switch value={profile.limitations.includes(l.id)} onValueChange={() => toggleLimitation(l.id)} trackColor={{ true: theme.accent }} accessibilityLabel={`Work around ${l.label.toLowerCase()}`} accessibilityHint={l.hint} />
               </Row>
             </View>
           ))}
@@ -148,8 +151,9 @@ export default function SettingsScreen() {
               keyboardType="numbers-and-punctuation"
               returnKeyType="done"
               maxLength={10}
-              style={[styles.dateInput, { color: startValid ? theme.text : '#C0392B', borderColor: theme.border, backgroundColor: theme.background }]}
-              accessibilityLabel="Program start date"
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+              style={[styles.dateInput, { color: startValid ? theme.text : theme.danger, borderColor: startValid ? theme.border : theme.danger, backgroundColor: theme.background }]}
+              accessibilityLabel={`Program start date, year dash month dash day${startValid ? '' : '. Not a valid date'}`}
             />
           </Row>
           <Divider />
@@ -224,6 +228,8 @@ export default function SettingsScreen() {
               }}
               disabled={busy}
               accessibilityRole="button"
+              accessibilityLabel="Export backup"
+              accessibilityState={{ disabled: busy, busy }}
               style={({ pressed }) => [styles.button, { backgroundColor: theme.accent }, (pressed || busy) && { opacity: 0.7 }]}>
               <ThemedText type="smallBold" style={{ color: theme.accentText }}>
                 Export
@@ -260,6 +266,8 @@ export default function SettingsScreen() {
               }
               disabled={busy}
               accessibilityRole="button"
+              accessibilityLabel="Restore from backup"
+              accessibilityState={{ disabled: busy, busy }}
               style={({ pressed }) => [styles.button, styles.buttonOutline, { borderColor: theme.accent }, (pressed || busy) && { opacity: 0.7 }]}>
               <ThemedText type="smallBold" style={{ color: theme.accent }}>
                 Restore
@@ -328,7 +336,8 @@ function Field({ value, onChangeText, unit, width, label }: { value: string; onC
         keyboardType="decimal-pad"
         returnKeyType="done"
         maxLength={6}
-        style={[styles.fieldInput, { color: theme.text, width }]}
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
+        style={[styles.fieldInput, { color: theme.text, minWidth: width }]}
         accessibilityLabel={label}
       />
       <ThemedText type="small" themeColor="textSecondary">
@@ -341,12 +350,14 @@ function Field({ value, onChangeText, unit, width, label }: { value: string; onC
 function Stepper({ value, onChange, label }: { value: number; onChange: (h: number) => void; label: string }) {
   const theme = useTheme();
   return (
-    <View style={styles.stepper} accessibilityLabel={label}>
-      <Pressable onPress={() => onChange((value + 23) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Earlier" style={styles.stepButton}>
+    <View style={styles.stepper}>
+      <Pressable onPress={() => onChange((value + 23) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, one hour earlier`} style={styles.stepButton}>
         <ThemedText style={styles.stepArrow}>‹</ThemedText>
       </Pressable>
-      <ThemedText style={[styles.stepValue, { color: theme.text }]}>{hourLabel(value)}</ThemedText>
-      <Pressable onPress={() => onChange((value + 1) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Later" style={styles.stepButton}>
+      <ThemedText style={[styles.stepValue, { color: theme.text }]} accessibilityLabel={`${label}: ${hourLabel(value)}`}>
+        {hourLabel(value)}
+      </ThemedText>
+      <Pressable onPress={() => onChange((value + 1) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, one hour later`} style={styles.stepButton}>
         <ThemedText style={styles.stepArrow}>›</ThemedText>
       </Pressable>
     </View>
@@ -359,16 +370,16 @@ const styles = StyleSheet.create({
   heading: { fontSize: 34, lineHeight: 40, fontWeight: 700 },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   card: { borderRadius: 16, paddingHorizontal: Spacing.three, marginTop: Spacing.three },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three, minHeight: 64 },
-  rowText: { flex: 1, gap: Spacing.half },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three, minHeight: 64, flexWrap: 'wrap' },
+  rowText: { flex: 1, minWidth: 140, gap: Spacing.half },
   stack: { paddingVertical: Spacing.three, gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, minHeight: 40, justifyContent: 'center' },
-  fieldBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44 },
-  fieldInput: { fontSize: 18, fontWeight: 600, textAlign: 'right' },
-  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44, width: 132, fontSize: 16, fontWeight: 600, textAlign: 'center' },
+  fieldBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44 },
+  fieldInput: { fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
+  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44, minWidth: 132, fontSize: 16, fontWeight: 600, textAlign: 'center', paddingVertical: Spacing.one },
   stepper: { flexDirection: 'row', alignItems: 'center' },
-  stepButton: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  stepButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   stepArrow: { fontSize: 28, lineHeight: 32 },
   stepValue: { fontSize: 16, fontWeight: 600, minWidth: 76, textAlign: 'center' },
   button: { minHeight: 44, borderRadius: 12, paddingHorizontal: Spacing.three, justifyContent: 'center', alignItems: 'center' },

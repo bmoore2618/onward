@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
+import { MAX_FONT_SCALE, ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { nextMonday, type CardioMode, type Equipment, type Limitation, type Profile } from '@/data/profile';
 import { PROGRAM_LENGTH_DAYS } from '@/data/program';
@@ -60,8 +60,10 @@ export function Onboarding() {
   const steps = [
     // 0 Welcome
     <View key="welcome" style={styles.center}>
-      <Image source={require('@/assets/images/splash-icon.png')} style={styles.mark} contentFit="contain" />
-      <ThemedText style={styles.title}>Onward</ThemedText>
+      <Image source={require('@/assets/images/splash-icon.png')} style={styles.mark} contentFit="contain" accessibilityIgnoresInvertColors accessible={false} />
+      <ThemedText style={styles.title} accessibilityRole="header">
+        Onward
+      </ThemedText>
       <ThemedText themeColor="textSecondary" style={styles.centerText}>
         A {PROGRAM_LENGTH_DAYS}-day comeback for people getting back into shape after time away. Three strength sessions a week, two conditioning, one easy day, one rest.
       </ThemedText>
@@ -75,6 +77,7 @@ export function Onboarding() {
         placeholderTextColor={theme.textSecondary}
         autoCapitalize="words"
         returnKeyType="done"
+        maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
         accessibilityLabel="Your first name"
       />
@@ -82,7 +85,9 @@ export function Onboarding() {
 
     // 1 Start date
     <View key="start" style={styles.stack}>
-      <ThemedText style={styles.title}>When is Day 1?</ThemedText>
+      <ThemedText style={styles.title} accessibilityRole="header">
+        When is Day 1?
+      </ThemedText>
       <ThemedText themeColor="textSecondary">Day 1 is a Monday, so rest days land on Sundays. The program follows the calendar from there.</ThemedText>
       <Option on={p.programStartDate === upcoming} title={`Next Monday, ${pretty(upcoming)}`} hint="Recommended. A few days to get set up." onPress={() => patch({ programStartDate: upcoming })} />
       <Option on={p.programStartDate === lastMonday} title={`This week, started ${pretty(lastMonday)}`} hint={`You’d be on Day ${Math.max(1, Math.round((dateFromKey(today).getTime() - dateFromKey(lastMonday).getTime()) / 86_400_000) + 1)} today. Fine if you’ve already begun.`} onPress={() => patch({ programStartDate: lastMonday })} />
@@ -104,15 +109,18 @@ export function Onboarding() {
           keyboardType="numbers-and-punctuation"
           returnKeyType="done"
           maxLength={10}
-          style={[styles.dateInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
-          accessibilityLabel="Custom start date"
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
+          style={[styles.dateInput, { color: customStart && !customValid ? theme.danger : theme.text, borderColor: customStart && !customValid ? theme.danger : theme.border, backgroundColor: theme.backgroundElement }]}
+          accessibilityLabel="Another start date, year dash month dash day"
         />
       </View>
     </View>,
 
     // 2 Where you train
     <View key="where" style={styles.stack}>
-      <ThemedText style={styles.title}>Where will you train?</ThemedText>
+      <ThemedText style={styles.title} accessibilityRole="header">
+        Where will you train?
+      </ThemedText>
       <ThemedText themeColor="textSecondary">Same program either way. This only changes which movement fills each slot.</ThemedText>
       {EQUIPMENT.map((e) => (
         <Option key={e.id} on={p.equipment === e.id} title={e.label} hint={e.hint} onPress={() => patch({ equipment: e.id })} />
@@ -124,13 +132,15 @@ export function Onboarding() {
         ))}
       </View>
       <Row label="Punching bag" hint="Adds bag rounds to Saturday conditioning">
-        <Switch value={p.hasHeavyBag} onValueChange={(on) => patch({ hasHeavyBag: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Punching bag" />
+        <Switch value={p.hasHeavyBag} onValueChange={(on) => patch({ hasHeavyBag: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Punching bag" accessibilityHint="Adds bag rounds to Saturday conditioning" />
       </Row>
     </View>,
 
     // 3 Work around
     <View key="limits" style={styles.stack}>
-      <ThemedText style={styles.title}>Anything to work around?</ThemedText>
+      <ThemedText style={styles.title} accessibilityRole="header">
+        Anything to work around?
+      </ThemedText>
       <ThemedText themeColor="textSecondary">
         Picks movements many people with these histories find more comfortable. Every original movement stays available as a swap. Training preference, not medical advice.
       </ThemedText>
@@ -140,7 +150,8 @@ export function Onboarding() {
             value={p.limitations.includes(l.id)}
             onValueChange={(on) => patch({ limitations: on ? [...p.limitations, l.id] : p.limitations.filter((x) => x !== l.id) })}
             trackColor={{ true: theme.accent }}
-            accessibilityLabel={l.label}
+            accessibilityLabel={`Work around ${l.label.toLowerCase()}`}
+            accessibilityHint={l.hint}
           />
         </Row>
       ))}
@@ -151,7 +162,9 @@ export function Onboarding() {
 
     // 4 Goal and weigh-ins
     <View key="goal" style={styles.stack}>
-      <ThemedText style={styles.title}>A weight goal?</ThemedText>
+      <ThemedText style={styles.title} accessibilityRole="header">
+        A weight goal?
+      </ThemedText>
       <ThemedText themeColor="textSecondary">Optional. The chart shows a steady 0.5–1 lb a week pace, which is what realistic looks like.</ThemedText>
       <View style={[styles.optionRow, { borderColor: theme.border }]}>
         <ThemedText style={styles.optionText}>Goal weight</ThemedText>
@@ -164,6 +177,7 @@ export function Onboarding() {
             keyboardType="decimal-pad"
             returnKeyType="done"
             maxLength={6}
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={[styles.unitInput, { color: theme.text }]}
             accessibilityLabel="Goal weight in pounds"
           />
@@ -190,7 +204,9 @@ export function Onboarding() {
 
     // 5 Reminders
     <View key="reminders" style={styles.stack}>
-      <ThemedText style={styles.title}>Reminders</ThemedText>
+      <ThemedText style={styles.title} accessibilityRole="header">
+        Reminders
+      </ThemedText>
       <ThemedText themeColor="textSecondary">A heads-up the night before and a nudge in the morning. Never about a missed day. Change them any time in Settings.</ThemedText>
       <Row label="Notifications">
         <Switch value={p.notificationsEnabled} onValueChange={(on) => patch({ notificationsEnabled: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Notifications" />
@@ -210,7 +226,7 @@ export function Onboarding() {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        <View style={styles.dots}>
+        <View style={styles.dots} accessible accessibilityRole="progressbar" accessibilityLabel={`Setup step ${step + 1} of ${steps.length}`} accessibilityValue={{ min: 1, max: steps.length, now: step + 1 }}>
           {steps.map((_, i) => (
             <View key={i} style={[styles.dot, { backgroundColor: i <= step ? theme.accent : theme.backgroundSelected }]} />
           ))}
@@ -229,6 +245,8 @@ export function Onboarding() {
           onPress={() => (last ? onward.finishOnboarding(p) : setStep(step + 1))}
           disabled={!canNext}
           accessibilityRole="button"
+          accessibilityState={{ disabled: !canNext }}
+          accessibilityHint={canNext ? undefined : 'Enter a valid Day 1 date first'}
           style={({ pressed }) => [styles.next, { backgroundColor: theme.accent }, (pressed || !canNext) && { opacity: 0.7 }]}>
           <ThemedText style={[styles.nextLabel, { color: theme.accentText }]}>{last ? 'Start' : step === 0 ? 'Get started' : 'Next'}</ThemedText>
         </Pressable>
@@ -287,12 +305,14 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 
 function Stepper({ value, onChange, label }: { value: number; onChange: (h: number) => void; label: string }) {
   return (
-    <View style={styles.stepper} accessibilityLabel={label}>
-      <Pressable onPress={() => onChange((value + 23) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Earlier" style={styles.stepButton}>
+    <View style={styles.stepper}>
+      <Pressable onPress={() => onChange((value + 23) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, one hour earlier`} style={styles.stepButton}>
         <ThemedText style={styles.stepArrow}>‹</ThemedText>
       </Pressable>
-      <ThemedText style={styles.stepValue}>{hourLabel(value)}</ThemedText>
-      <Pressable onPress={() => onChange((value + 1) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel="Later" style={styles.stepButton}>
+      <ThemedText style={styles.stepValue} accessibilityLabel={`${label}: ${hourLabel(value)}`}>
+        {hourLabel(value)}
+      </ThemedText>
+      <Pressable onPress={() => onChange((value + 1) % 24)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${label}, one hour later`} style={styles.stepButton}>
         <ThemedText style={styles.stepArrow}>›</ThemedText>
       </Pressable>
     </View>
@@ -310,16 +330,16 @@ const styles = StyleSheet.create({
   stack: { gap: Spacing.three },
   title: { fontSize: 30, lineHeight: 36, fontWeight: 700 },
   subTitle: { fontSize: 18, lineHeight: 24, fontWeight: 700, marginTop: Spacing.two },
-  input: { borderWidth: 1, borderRadius: 12, height: 52, paddingHorizontal: Spacing.three, fontSize: 18, alignSelf: 'stretch', textAlign: 'center' },
-  optionRow: { borderWidth: 1.5, borderRadius: 14, padding: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 60 },
-  optionText: { flex: 1, gap: 2 },
-  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44, width: 132, fontSize: 16, fontWeight: 600, textAlign: 'center' },
+  input: { borderWidth: 1, borderRadius: 12, minHeight: 52, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, fontSize: 18, alignSelf: 'stretch', textAlign: 'center' },
+  optionRow: { borderWidth: 1.5, borderRadius: 14, padding: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 60, flexWrap: 'wrap' },
+  optionText: { flex: 1, minWidth: 140, gap: 2 },
+  dateInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44, minWidth: 132, fontSize: 16, fontWeight: 600, textAlign: 'center', paddingVertical: Spacing.one },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: { borderRadius: 999, paddingHorizontal: Spacing.three, minHeight: 40, justifyContent: 'center' },
-  unitBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, height: 44 },
-  unitInput: { width: 64, fontSize: 18, fontWeight: 600, textAlign: 'right' },
+  unitBox: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, borderWidth: 1, borderRadius: 10, paddingHorizontal: Spacing.two, minHeight: 44 },
+  unitInput: { minWidth: 64, fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
   stepper: { flexDirection: 'row', alignItems: 'center' },
-  stepButton: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  stepButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   stepArrow: { fontSize: 28, lineHeight: 32 },
   stepValue: { fontSize: 16, fontWeight: 600, minWidth: 76, textAlign: 'center' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.three, borderTopWidth: StyleSheet.hairlineWidth, gap: Spacing.three },

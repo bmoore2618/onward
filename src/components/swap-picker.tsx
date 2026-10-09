@@ -30,8 +30,8 @@ export function SwapPicker({ exercise, phaseName, askScope, onPick, onClose }: P
 
   return (
     <Modal visible={!!exercise} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { backgroundColor: theme.background }]}>
+      <Pressable style={styles.backdrop} onPress={close} accessibilityRole="button" accessibilityLabel="Close" />
+      <View style={[styles.sheet, { backgroundColor: theme.background }]} accessibilityViewIsModal>
         {pending ? (
           <>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
@@ -84,6 +84,7 @@ export function SwapPicker({ exercise, phaseName, askScope, onPick, onClose }: P
                   key={m.id}
                   onPress={() => (askScope ? setPending(m) : onPick(m.id, 'always'))}
                   accessibilityRole="button"
+                  accessibilityLabel={m.cue ? `${m.name}. ${m.cue}` : m.name}
                   style={({ pressed }) => [
                     styles.row,
                     i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth },

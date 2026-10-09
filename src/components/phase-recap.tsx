@@ -38,9 +38,9 @@ export function PhaseRecap({ day }: { day: number }) {
 
 function Stat({ value, label, color }: { value: string; label: string; color: string }) {
   return (
-    <View style={styles.stat}>
+    <View style={styles.stat} accessible accessibilityLabel={`${value} ${label}`}>
       <ThemedText style={[styles.value, { color }]}>{value}</ThemedText>
-      <ThemedText type="small" style={{ color, opacity: 0.85 }}>
+      <ThemedText type="small" style={{ color }}>
         {label}
       </ThemedText>
     </View>

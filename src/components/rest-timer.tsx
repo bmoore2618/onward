@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Vibration } from 'react-native';
+import { AccessibilityInfo, Vibration } from 'react-native';
 
 /** Pull the first number of seconds out of a rest string like "90–120 s" or "2–3 min" */
 export function restSeconds(rest: string): number {
@@ -20,6 +20,8 @@ export function useRestTimer() {
     if (!timer) return;
     if (timer.remaining === 0) {
       Vibration.vibrate([0, 300, 150, 300]);
+      // VoiceOver users can't watch the countdown; say when it's over
+      AccessibilityInfo.announceForAccessibility('Rest over. Next set.');
       const t = setTimeout(() => setTimer(null), 1500);
       return () => clearTimeout(t);
     }

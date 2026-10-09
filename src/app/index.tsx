@@ -13,7 +13,7 @@ import { SkipPreview } from '@/components/skip-preview';
 import { StatusSwitch } from '@/components/status-switch';
 import { restSeconds, useRestTimer } from '@/components/rest-timer';
 import { SwapPicker } from '@/components/swap-picker';
-import { ThemedText } from '@/components/themed-text';
+import { MAX_FONT_SCALE, ThemedText } from '@/components/themed-text';
 import { WeekSummary } from '@/components/week-summary';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { checklistFor, MOBILITY_VIDEO_URL, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, STANDARD, type Exercise } from '@/data/program';
@@ -58,7 +58,13 @@ export default function TodayScreen() {
           <Pressable onPress={() => setViewDate(addDays(viewDate, -1))} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous day" style={styles.navButton}>
             <ThemedText style={styles.navArrow}>‹</ThemedText>
           </Pressable>
-          <Pressable onPress={() => setViewDate(onward.today)} disabled={v.isToday} accessibilityRole="button" style={styles.navCenter}>
+          <Pressable
+            onPress={() => setViewDate(onward.today)}
+            disabled={v.isToday}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: v.isToday }}
+            accessibilityLabel={`${inProgram ? `Day ${v.day} of ${PROGRAM_LENGTH_DAYS}` : 'Outside the program'}, ${v.isToday ? 'today' : dateLabel}${v.isToday ? '' : '. Back to today'}`}
+            style={styles.navCenter}>
             <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
               {inProgram ? `DAY ${v.day} OF ${PROGRAM_LENGTH_DAYS}` : 'OUTSIDE THE PROGRAM'}
             </ThemedText>
@@ -111,7 +117,7 @@ export default function TodayScreen() {
                 <ThemedText type="small" style={{ color: theme.accentText }}>
                   {checked} of {checklistFor(session).length} checklist items · Tomorrow: {onward.sessionFor(v.day + 1).title}
                 </ThemedText>
-                <Pressable onPress={onward.reopenToday} hitSlop={8} accessibilityRole="button">
+                <Pressable onPress={onward.reopenToday} hitSlop={8} accessibilityRole="button" style={styles.textButton}>
                   <ThemedText type="small" style={[styles.bannerLink, { color: theme.accentText }]}>
                     Tapped by mistake? Reopen today
                   </ThemedText>
@@ -192,8 +198,9 @@ export default function TodayScreen() {
                                   keyboardType="decimal-pad"
                                   returnKeyType="done"
                                   maxLength={5}
+                                  maxFontSizeMultiplier={MAX_FONT_SCALE}
                                   style={[styles.setInput, { color: theme.text }]}
-                                  accessibilityLabel={`${ex.movement.name} set ${s + 1} weight in pounds`}
+                                  accessibilityLabel={`${ex.movement.name} set ${s + 1} weight in pounds${ex.movement.load === 'each' ? ' per dumbbell' : ''}`}
                                 />
                               </View>
                             </View>
@@ -215,9 +222,10 @@ export default function TodayScreen() {
                             <Pressable
                               key={h}
                               onPress={() => onward.setHit(viewDate, ex.movement.id, on ? null : h)}
+                              hitSlop={6}
                               accessibilityRole="radio"
                               accessibilityState={{ selected: on }}
-                              accessibilityLabel={h === 'hit' ? 'Yes, all reps hit' : 'No, fell short'}
+                              accessibilityLabel={h === 'hit' ? `Yes, all reps hit for ${ex.movement.name}` : `Not quite, fell short on ${ex.movement.name}`}
                               style={[styles.hitChip, { backgroundColor: on ? theme.accent : theme.backgroundSelected }]}>
                               <ThemedText type="smallBold" style={{ color: on ? theme.accentText : theme.textSecondary }}>
                                 {h === 'hit' ? 'Yes' : 'Not quite'}
@@ -239,12 +247,12 @@ export default function TodayScreen() {
                             onPress={rest.stop}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel="Stop rest timer"
+                            accessibilityLabel={`Rest timer, ${rest.label} left. Stop`}
                             style={[styles.restButton, styles.restRunning, { backgroundColor: theme.accent, borderColor: theme.accent }]}>
                             <ThemedText type="smallBold" style={[styles.restClock, { color: theme.accentText }]}>
                               {rest.label}
                             </ThemedText>
-                            <ThemedText type="small" style={{ color: theme.accentText, opacity: 0.85 }}>
+                            <ThemedText type="small" style={{ color: theme.accentText }}>
                               tap to stop
                             </ThemedText>
                           </Pressable>
@@ -262,14 +270,14 @@ export default function TodayScreen() {
                         )
                       )}
                       {editable && (
-                        <Pressable onPress={() => setSwapping(ex)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Swap ${ex.movement.name}`}>
+                        <Pressable onPress={() => setSwapping(ex)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Swap ${ex.movement.name}`} style={styles.textButton}>
                           <ThemedText type="small" style={{ color: theme.accent }}>
                             Swap
                           </ThemedText>
                         </Pressable>
                       )}
                       {ex.movement.videoUrl && (
-                        <Pressable onPress={() => openURL(ex.movement.videoUrl!)} hitSlop={8} accessibilityRole="link">
+                        <Pressable onPress={() => openURL(ex.movement.videoUrl!)} hitSlop={8} accessibilityRole="link" accessibilityLabel={`Watch ${ex.movement.name} demo`} style={styles.textButton}>
                           <ThemedText type="small" style={{ color: theme.accent }}>
                             Watch demo
                           </ThemedText>
@@ -293,7 +301,7 @@ export default function TodayScreen() {
 
             <View style={styles.guidance}>
               {session.kind === 'rest' && (
-                <Pressable onPress={() => openURL(REST_DAY_VIDEO_URL)} hitSlop={8} accessibilityRole="link">
+                <Pressable onPress={() => openURL(REST_DAY_VIDEO_URL)} hitSlop={8} accessibilityRole="link" style={styles.textButton}>
                   <ThemedText type="small" style={{ color: theme.accent }}>
                     Watch: why rest days matter
                   </ThemedText>
@@ -331,6 +339,7 @@ export default function TodayScreen() {
                         keyboardType="decimal-pad"
                         returnKeyType="done"
                         maxLength={6}
+                        maxFontSizeMultiplier={MAX_FONT_SCALE}
                         style={[styles.weightInput, styles.bodyWeightInput, { color: theme.text }]}
                         accessibilityLabel="Body weight in pounds"
                       />
@@ -345,35 +354,33 @@ export default function TodayScreen() {
                 <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
                   {checklistFor(session).map((item, i) => {
                     const on = !!v.checklist[item.id];
+                    // The checkbox and the demo link are siblings, not nested, so VoiceOver reaches both
                     return (
-                      <Pressable
-                        key={item.id}
-                        onPress={() => onward.toggleItem(viewDate, item.id)}
-                        accessibilityRole="checkbox"
-                        accessibilityLabel={item.label}
-                        accessibilityState={{ checked: on }}
-                        style={({ pressed }) => [
-                          styles.checkRow,
-                          i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth },
-                          pressed && { opacity: 0.6 },
-                        ]}>
-                        <View
-                          style={[
-                            styles.checkCircle,
-                            { borderColor: on ? theme.accent : theme.border },
-                            on && { backgroundColor: theme.accent },
-                          ]}>
-                          {on && <ThemedText style={[styles.checkMark, { color: theme.accentText }]}>✓</ThemedText>}
-                        </View>
-                        <ThemedText style={styles.checkLabel}>{item.label}</ThemedText>
+                      <View key={item.id} style={[styles.checkRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+                        <Pressable
+                          onPress={() => onward.toggleItem(viewDate, item.id)}
+                          accessibilityRole="checkbox"
+                          accessibilityLabel={item.label}
+                          accessibilityState={{ checked: on }}
+                          style={({ pressed }) => [styles.checkPress, pressed && { opacity: 0.6 }]}>
+                          <View
+                            style={[
+                              styles.checkCircle,
+                              { borderColor: on ? theme.accent : theme.border },
+                              on && { backgroundColor: theme.accent },
+                            ]}>
+                            {on && <ThemedText style={[styles.checkMark, { color: theme.accentText }]}>✓</ThemedText>}
+                          </View>
+                          <ThemedText style={styles.checkLabel}>{item.label}</ThemedText>
+                        </Pressable>
                         {item.id === 'mobility' && (
-                          <Pressable onPress={() => openURL(MOBILITY_VIDEO_URL)} hitSlop={8} accessibilityRole="link">
+                          <Pressable onPress={() => openURL(MOBILITY_VIDEO_URL)} hitSlop={8} accessibilityRole="link" accessibilityLabel="Watch stretch demo" style={styles.textButton}>
                             <ThemedText type="small" style={{ color: theme.accent }}>
                               Stretch demo
                             </ThemedText>
                           </Pressable>
                         )}
-                      </Pressable>
+                      </View>
                     );
                   })}
                 </View>
@@ -454,8 +461,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   navRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.two },
-  navButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  navButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   navArrow: { fontSize: 32, lineHeight: 36 },
+  textButton: { minHeight: 44, justifyContent: 'center' },
   navCenter: { flex: 1, alignItems: 'center', gap: 2 },
   eyebrow: { letterSpacing: 1 },
   heading: { fontSize: 34, lineHeight: 40, fontWeight: 700 },
@@ -474,17 +482,17 @@ const styles = StyleSheet.create({
   hitRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.one, marginTop: Spacing.half },
   setsRow: { flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },
   setCol: { gap: 2, alignItems: 'center' },
-  setBox: { borderWidth: 1, borderRadius: 10, height: 44, width: 60, justifyContent: 'center', paddingHorizontal: Spacing.one },
-  setInput: { fontSize: 18, fontWeight: 600, textAlign: 'center' },
+  setBox: { borderWidth: 1, borderRadius: 10, minHeight: 44, minWidth: 60, justifyContent: 'center', paddingHorizontal: Spacing.one },
+  setInput: { fontSize: 18, fontWeight: 600, textAlign: 'center', paddingVertical: Spacing.one },
   unit: { paddingBottom: Spacing.three },
   restRunning: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   restClock: { fontVariant: ['tabular-nums'] },
-  hitChip: { borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 32, justifyContent: 'center' },
+  hitChip: { borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 36, justifyContent: 'center' },
   infoCard: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half },
   shortToggle: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, gap: Spacing.half, minHeight: 56 },
   note: { fontStyle: 'italic' },
   exerciseLinks: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.three, marginTop: Spacing.half },
-  restButton: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 32, justifyContent: 'center' },
+  restButton: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: Spacing.two, minHeight: 36, justifyContent: 'center' },
   blockRow: { paddingVertical: Spacing.three, gap: Spacing.half },
   weightBox: {
     flexDirection: 'row',
@@ -493,13 +501,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: Spacing.two,
-    height: 44,
+    minHeight: 44,
   },
-  weightInput: { width: 44, fontSize: 18, fontWeight: 600, textAlign: 'right' },
-  bodyWeightInput: { width: 64 },
+  weightInput: { minWidth: 44, fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
+  bodyWeightInput: { minWidth: 64 },
   guidance: { marginTop: Spacing.two, gap: Spacing.one },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 56 },
+  checkPress: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 56 },
   checkCircle: {
     width: 28,
     height: 28,
@@ -512,12 +521,14 @@ const styles = StyleSheet.create({
   checkMark: { fontSize: 16, lineHeight: 20, fontWeight: 700 },
   completeButton: {
     marginTop: Spacing.five,
-    height: 64,
+    minHeight: 64,
+    paddingVertical: Spacing.three,
+    paddingHorizontal: Spacing.four,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  completeLabel: { fontSize: 20, fontWeight: 700 },
+  completeLabel: { fontSize: 20, fontWeight: 700, textAlign: 'center' },
   centered: { textAlign: 'center' },
   doneWrap: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.six },
   previewLink: { minHeight: 44, justifyContent: 'center', marginTop: Spacing.two },

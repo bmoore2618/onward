@@ -37,7 +37,7 @@ export function MilestoneGrid({ milestones }: { milestones: EarnedMilestone[] })
       </ThemedText>
       <View style={styles.grid}>
         {milestones.map((m) => (
-          <View key={m.id} style={styles.cell} accessibilityLabel={`${m.title}: ${m.earnedOn ? `earned ${short(m.earnedOn)}` : m.how}`}>
+          <View key={m.id} style={styles.cell} accessible accessibilityLabel={`${m.title}, ${m.earnedOn ? `earned ${short(m.earnedOn)}` : `not yet: ${m.how}`}`}>
             <Badge m={m} />
             <ThemedText type="smallBold" style={styles.cellTitle} numberOfLines={2}>
               {m.title}
@@ -59,7 +59,9 @@ export function NewMilestoneCard({ milestones, onDismiss }: { milestones: Earned
   const m = milestones[0];
   return (
     <View style={[styles.newCard, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }]}>
-      <Badge m={m} size={64} />
+      <View accessible accessibilityLabel={`New milestone: ${m.title}. ${m.how}${milestones.length > 1 ? `, and ${milestones.length - 1} more` : ''}`} style={styles.newBadge}>
+        <Badge m={m} size={64} />
+      </View>
       <View style={styles.newText}>
         <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
           MILESTONE{milestones.length > 1 ? `S · +${milestones.length - 1} more` : ''}
@@ -68,7 +70,7 @@ export function NewMilestoneCard({ milestones, onDismiss }: { milestones: Earned
         <ThemedText type="small" themeColor="textSecondary">
           {m.how}
         </ThemedText>
-        <Pressable onPress={onDismiss} hitSlop={8} accessibilityRole="button" style={styles.dismiss}>
+        <Pressable onPress={onDismiss} hitSlop={8} accessibilityRole="button" accessibilityLabel="Dismiss milestone card" style={styles.dismiss}>
           <ThemedText type="smallBold" style={{ color: theme.accent }}>
             Nice. Onward
           </ThemedText>
@@ -87,8 +89,9 @@ const styles = StyleSheet.create({
   cellTitle: { textAlign: 'center', marginTop: Spacing.half },
   cellSub: { textAlign: 'center', fontSize: 12, lineHeight: 16 },
   newCard: { borderRadius: 16, borderWidth: 1.5, padding: Spacing.three, marginTop: Spacing.three, flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
+  newBadge: { alignSelf: 'flex-start' },
   newText: { flex: 1, gap: 2 },
   eyebrow: { letterSpacing: 1 },
   newTitle: { fontSize: 22, lineHeight: 28, fontWeight: 700 },
-  dismiss: { marginTop: Spacing.one, minHeight: 32, justifyContent: 'center' },
+  dismiss: { marginTop: Spacing.one, minHeight: 44, justifyContent: 'center' },
 });
