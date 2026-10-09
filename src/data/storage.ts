@@ -32,6 +32,8 @@ export type DayRecord = {
   holdPhase?: boolean;
   /** Did something other than the planned session (a walk, a swim…) */
   movedAnyway?: { kind: MovedKind; minutes?: number };
+  /** Cardio-track self-test result, as typed ("11:42", "6.4 mi") */
+  testResult?: string;
 };
 
 export type MovedKind = 'walk' | 'bike' | 'swim' | 'run' | 'other';
@@ -49,6 +51,7 @@ export type AppState = {
     setWeights?: Record<string, string[]>;
     hits?: Record<string, 'hit' | 'miss'>;
     short?: boolean;
+    testResult?: string;
   } | null;
   /** Chosen movement per exercise slot */
   swaps: Swaps;

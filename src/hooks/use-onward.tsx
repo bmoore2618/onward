@@ -59,6 +59,8 @@ export type DayView = {
   hitFor: (movementId: string) => 'hit' | 'miss' | undefined;
   short: boolean;
   bodyWeight: string;
+  /** Self-test result typed on a cardio-track test day */
+  testResult: string;
   /** Whether this day counts as completed under the day-completion rule */
   counts: boolean;
 };
@@ -131,6 +133,9 @@ type Onward = {
   setMovement: (date: string, slot: string, movementId: string, scope?: 'always' | 'phase') => void;
   /** Best logged weight per movement since Day 1, with the first weight for comparison */
   bestLifts: () => { movementId: string; name: string; first: number; best: number; bestDay: number }[];
+  /** Cardio-track self-test results in day order */
+  selfTests: () => { day: number; date: string; result: string; prompt: string }[];
+  setTestResult: (date: string, value: string) => void;
   /** Every milestone, with the date earned or null */
   milestones: () => EarnedMilestone[];
   /** Earned milestones whose card hasn't been shown yet */
@@ -344,6 +349,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         hitFor: (movementId) => (record ? record.hits?.[movementId] : isToday ? draft.hits?.[movementId] : undefined),
         short: !!opts.short,
         bodyWeight: state.bodyWeight[date] ?? '',
+        testResult: record ? (record.testResult ?? '') : isToday ? (draft.testResult ?? '') : '',
         counts: dayCounts(session, checklist),
       };
     };
@@ -815,6 +821,23 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           .sort((a, b) => b.best - b.first - (a.best - a.first) || a.name.localeCompare(b.name));
       },
 
+      selfTests: () =>
+        state.completed
+          .filter((r) => r.testResult?.trim())
+          .map((r) => {
+            const s = sessionFor(r.day);
+            return { day: r.day, date: r.date, result: r.testResult!.trim(), prompt: s.test?.prompt ?? 'Self-test' };
+          }),
+
+      setTestResult: (date, value) =>
+        update((prev) => {
+          if (date === today && !prev.completed.some((r) => r.date === date)) {
+            const d = prev.draft?.date === today ? prev.draft : emptyDraft(today);
+            return { ...prev, draft: { ...d, testResult: value } };
+          }
+          return withRecord(prev, date, (r) => ({ ...r, testResult: value }));
+        }),
+
       toggleItem: (date, id) =>
         update((prev) => {
           if (date === today && !prev.completed.some((r) => r.date === date)) {
@@ -861,6 +884,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
             short: d.short,
             reentry: opts.reentry || undefined,
             holdPhase: opts.holdPhase || undefined,
+            testResult: d.testResult?.trim() || undefined,
           };
           return {
             ...prev,
@@ -877,7 +901,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           return {
             ...prev,
             completed: prev.completed.filter((r) => r.date !== today),
-            draft: { date: today, checklist: rec.checklist, weights: rec.weights, setWeights: rec.setWeights, hits: rec.hits, short: rec.short },
+            draft: { date: today, checklist: rec.checklist, weights: rec.weights, setWeights: rec.setWeights, hits: rec.hits, short: rec.short, testResult: rec.testResult },
           };
         }),
     };

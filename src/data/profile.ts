@@ -15,8 +15,13 @@ export function nextMonday(from = new Date()): string {
 
 export type Limitation = 'lower-back' | 'knee' | 'shoulder';
 
-/** Where the user trains. Changes only which movement fills each slot. */
-export type Equipment = 'home' | 'gym' | 'bodyweight';
+/**
+ * Where the user trains. For home, gym and bodyweight this changes only which
+ * movement fills each slot. 'cardio' is the cardio-only track: same calendar
+ * and habits, but lifting days become 20-minute bodyweight sessions and the
+ * cardio days ramp over the 75 days (see program.ts).
+ */
+export type Equipment = 'home' | 'gym' | 'bodyweight' | 'cardio';
 
 export type CardioMode = 'bike' | 'walk' | 'row';
 

@@ -44,7 +44,7 @@ Not needed until testers without your garage join. Full-gym machine movements ne
 
 **Full gym:** leg press, hack squat, machine chest press, machine row, single-leg leg press, machine shoulder press, assisted pull-up machine, trap-bar deadlift, barbell Romanian deadlift, cable pull-through.
 
-**Bodyweight:** pause squat, split squat, assisted squat (hold a post), incline push-up (hands on bench), wall push-up, inverted row (bar or table), feet-elevated inverted row, reverse lunge, feet-elevated pike push-up, scapular pull, bodyweight Romanian deadlift, single-leg Romanian deadlift, suitcase carry with a household object.
+**Bodyweight (also the cardio-only track's Monday/Friday sessions):** pause squat, split squat, assisted squat (hold a post), incline push-up (hands on bench), wall push-up, inverted row (bar or table), feet-elevated inverted row, reverse lunge, feet-elevated pike push-up, scapular pull, bodyweight Romanian deadlift, single-leg Romanian deadlift, suitcase carry with a household object, slider hamstring curl, negative pull-up.
 
 ## Filming notes
 

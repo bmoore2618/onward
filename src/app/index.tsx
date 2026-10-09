@@ -141,12 +141,16 @@ export default function TodayScreen() {
               <View style={[styles.infoCard, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }]}>
                 <ThemedText type="smallBold">Easing back in</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  A few days away, so today is a lighter session: two sets per movement, about 10% less weight. That’s the plan, not a penalty.
+                  {session.kind !== 'strength'
+                    ? 'A few days away, so today is shorter and easier than planned. That’s the plan, not a penalty.'
+                    : onward.profile.equipment === 'cardio'
+                      ? 'A few days away, so today is a lighter session: two sets per movement, easier rung if you like. That’s the plan, not a penalty.'
+                      : 'A few days away, so today is a lighter session: two sets per movement, about 10% less weight. That’s the plan, not a penalty.'}
                 </ThemedText>
               </View>
             )}
 
-            {session.kind === 'strength' && editable && (
+            {session.kind === 'strength' && editable && onward.profile.equipment !== 'cardio' && (
               <Pressable
                 onPress={() => onward.toggleShort(viewDate)}
                 accessibilityRole="switch"
@@ -298,6 +302,28 @@ export default function TodayScreen() {
                 </View>
               ))}
             </View>
+
+            {session.test && editable && (
+              <View style={[styles.card, styles.testCard, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText>{session.test.prompt}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Write it down here. {v.day < 40 ? 'Week 11 compares against it.' : 'Compare it with Day 2 on the Progress tab.'}
+                </ThemedText>
+                <View style={[styles.weightBox, styles.testBox, { borderColor: theme.border, backgroundColor: theme.background }]}>
+                  <TextInput
+                    value={v.testResult}
+                    onChangeText={(t) => onward.setTestResult(viewDate, t)}
+                    placeholder={session.test.placeholder}
+                    placeholderTextColor={theme.textSecondary}
+                    returnKeyType="done"
+                    maxLength={16}
+                    maxFontSizeMultiplier={MAX_FONT_SCALE}
+                    style={[styles.weightInput, styles.testInput, { color: theme.text }]}
+                    accessibilityLabel={`Self-test result: ${session.test.prompt}`}
+                  />
+                </View>
+              </View>
+            )}
 
             <View style={styles.guidance}>
               {session.kind === 'rest' && (
@@ -505,6 +531,9 @@ const styles = StyleSheet.create({
   },
   weightInput: { minWidth: 44, fontSize: 18, fontWeight: 600, textAlign: 'right', paddingVertical: Spacing.one },
   bodyWeightInput: { minWidth: 64 },
+  testCard: { paddingVertical: Spacing.three, gap: Spacing.half },
+  testBox: { alignSelf: 'stretch', marginTop: Spacing.two },
+  testInput: { flex: 1, textAlign: 'left', minWidth: 0 },
   guidance: { marginTop: Spacing.two, gap: Spacing.one },
   sectionTitle: { fontSize: 20, lineHeight: 28, fontWeight: 700, marginTop: Spacing.four },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 56 },

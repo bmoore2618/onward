@@ -149,6 +149,7 @@ export default function ProgressScreen() {
   const changeText = change === null ? '–' : change > 0 ? `+${change}` : `${change}`;
   const todayView = onward.viewDay(today);
   const bestLifts = onward.bestLifts();
+  const selfTests = onward.selfTests();
 
   const selectedDay = selected ? programDayFor(selected) : null;
   const selectedView = selected && selectedDay && selectedDay >= 1 && selectedDay <= PROGRAM_LENGTH_DAYS ? onward.viewDay(selected) : null;
@@ -216,10 +217,30 @@ export default function ProgressScreen() {
       </>
     ),
     lifts:
-      bestLifts.length > 0 ? (
+      bestLifts.length > 0 || selfTests.length > 0 ? (
           <>
-            <ThemedText style={styles.sectionTitle}>Strength since Day 1</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{bestLifts.length > 0 ? 'Strength since Day 1' : 'Self-test since Day 1'}</ThemedText>
             <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+              {selfTests.map((t, i) => (
+                <View
+                  key={t.date}
+                  accessible
+                  accessibilityLabel={`Day ${t.day} self-test, ${t.prompt}: ${t.result}`}
+                  style={[styles.detailRow, styles.liftRow, i > 0 && { borderTopColor: theme.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
+                  <View style={styles.detailName}>
+                    <ThemedText>Self-test · Day {t.day}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {t.prompt}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={{ color: i > 0 ? theme.accent : theme.textSecondary, fontWeight: 700 }}>{t.result}</ThemedText>
+                </View>
+              ))}
+              {selfTests.length === 1 && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNote}>
+                  Your starting line. The same test comes round in week 11.
+                </ThemedText>
+              )}
               {bestLifts.map((l, i) => (
                 <View
                   key={l.movementId}
@@ -237,9 +258,11 @@ export default function ProgressScreen() {
                   </ThemedText>
                 </View>
               ))}
-              <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNote}>
-                Best since Day 1, not lifetime bests. That’s the comparison that matters now.
-              </ThemedText>
+              {bestLifts.length > 0 && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNote}>
+                  Best since Day 1, not lifetime bests. That’s the comparison that matters now.
+                </ThemedText>
+              )}
             </View>
           </>
         ) : null,

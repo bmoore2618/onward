@@ -15,6 +15,7 @@ const EQUIPMENT: { id: Equipment; label: string; hint: string }[] = [
   { id: 'home', label: 'Home gym', hint: 'Dumbbells or kettlebells, a bench. A bar and rack if you have one.' },
   { id: 'gym', label: 'Full gym', hint: 'Barbells, machines, cables.' },
   { id: 'bodyweight', label: 'Bodyweight', hint: 'No equipment, or you travel a lot.' },
+  { id: 'cardio', label: 'Cardio only', hint: 'You’d rather not lift. Two 20-minute bodyweight sessions a week, the rest is bike, walk or row, easy first.' },
 ];
 const CARDIO: { id: CardioMode; label: string }[] = [
   { id: 'bike', label: 'Bike' },
@@ -121,7 +122,7 @@ export function Onboarding() {
       <ThemedText style={styles.title} accessibilityRole="header">
         Where will you train?
       </ThemedText>
-      <ThemedText themeColor="textSecondary">Same program either way. This only changes which movement fills each slot.</ThemedText>
+      <ThemedText themeColor="textSecondary">Same calendar and habits either way. This changes what fills each session.</ThemedText>
       {EQUIPMENT.map((e) => (
         <Option key={e.id} on={p.equipment === e.id} title={e.label} hint={e.hint} onPress={() => patch({ equipment: e.id })} />
       ))}

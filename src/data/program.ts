@@ -326,14 +326,21 @@ export type Exercise = {
 /** Movements per equipment profile: defaults rotate by phase, alternatives are the swap list */
 type Options = { defaults: MovementId[]; alternatives: MovementId[] };
 
+/** Profiles that have their own slot defaults; the cardio track borrows the bodyweight ones */
+type StrengthEquipment = Exclude<Equipment, 'cardio'>;
+
 type SlotDef = {
   slot: string;
   label: string;
   reps: 'main' | 'accessory';
   finisher?: boolean;
   /** Finisher rotation is weekly, not by phase */
-  byEquipment: Record<Equipment, Options>;
+  byEquipment: Record<StrengthEquipment, Options>;
 };
+
+export function isCardioTrack(profile: Pick<Profile, 'equipment'>): boolean {
+  return profile.equipment === 'cardio';
+}
 
 const STRENGTH_A: SlotDef[] = [
   {
@@ -539,6 +546,37 @@ const STRENGTH_C: SlotDef[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Cardio-only track: Monday and Friday movement sessions
+// ---------------------------------------------------------------------------
+
+/** Same list for every equipment key: these sessions are bodyweight by design */
+function bw(defaults: MovementId[], alternatives: MovementId[]): Record<StrengthEquipment, Options> {
+  const o = { defaults, alternatives };
+  return { gym: o, home: o, bodyweight: o };
+}
+
+/**
+ * Five pattern slots, 20 minutes, ladders that climb by phase. Defaults are
+ * ordered easiest → hardest so the phase rotation is a progression, not
+ * variety for its own sake. Every rung stays available as a swap.
+ */
+const MOVEMENT_A: SlotDef[] = [
+  { slot: 'm-squat', label: 'Squat', reps: 'main', byEquipment: bw(['assisted-squat', 'bodyweight-squat', 'pause-squat-bw', 'split-squat-bw'], ['box-step-up']) },
+  { slot: 'm-hinge', label: 'Hinge', reps: 'main', byEquipment: bw(['glute-bridge', 'bw-rdl', 'single-leg-glute-bridge', 'single-leg-rdl-bw'], ['slider-hamstring-curl']) },
+  { slot: 'm-push', label: 'Push', reps: 'main', byEquipment: bw(['wall-push-up', 'incline-push-up', 'push-up', 'push-up'], ['close-grip-push-up', 'decline-push-up']) },
+  { slot: 'm-pull', label: 'Pull', reps: 'main', byEquipment: bw(['inverted-row', 'inverted-row', 'feet-elevated-row', 'feet-elevated-row'], ['ring-rows', 'scap-pull']) },
+  { slot: 'm-carry', label: 'Carry or core', reps: 'accessory', byEquipment: bw(['household-carry', 'plank', 'household-carry', 'side-plank'], ['dead-bug', 'bird-dog']) },
+];
+
+const MOVEMENT_B: SlotDef[] = [
+  { slot: 'n-single-leg', label: 'Single-leg', reps: 'main', byEquipment: bw(['box-step-up', 'reverse-lunge-bw', 'split-squat-bw', 'bulgarian-split-squat-bw'], ['bodyweight-squat']) },
+  { slot: 'n-hinge', label: 'Hinge', reps: 'main', byEquipment: bw(['glute-bridge', 'single-leg-glute-bridge', 'single-leg-glute-bridge', 'slider-hamstring-curl'], ['bw-rdl', 'single-leg-rdl-bw']) },
+  { slot: 'n-push', label: 'Push (shoulders)', reps: 'main', byEquipment: bw(['incline-push-up', 'push-up', 'pike-push-up', 'elevated-pike-push-up'], ['wall-push-up', 'close-grip-push-up']) },
+  { slot: 'n-pull', label: 'Pull', reps: 'main', byEquipment: bw(['scap-pull', 'inverted-row', 'negative-pull-up', 'negative-pull-up'], ['feet-elevated-row', 'ring-rows']) },
+  { slot: 'n-core', label: 'Core', reps: 'accessory', byEquipment: bw(['dead-bug', 'bird-dog', 'side-plank', 'plank'], ['household-carry']) },
+];
+
+// ---------------------------------------------------------------------------
 // Sessions
 // ---------------------------------------------------------------------------
 
@@ -562,6 +600,8 @@ export type Session = {
   short?: boolean;
   /** True when this is an automatic lighter session after days away */
   reentry?: boolean;
+  /** Self-test day on the cardio track: what to record, e.g. "Time for 2 km" */
+  test?: { prompt: string; placeholder: string };
 };
 
 /** User's chosen movement per slot (slot id → movement id) */
@@ -586,11 +626,15 @@ function strength(id: string, title: string, defs: SlotDef[], day: number, profi
   const rx = rxFor(rxDay);
   const p = phaseIndex(day);
   const week = weekOf(day);
+  // Cardio track: bodyweight ladders, 2–3 sets, already 20 min so the short version is moot
+  const cardio = isCardioTrack(profile);
+  const equipment: StrengthEquipment = profile.equipment === 'cardio' ? 'bodyweight' : profile.equipment;
+  const short = opts.short && !cardio;
 
   let coreIndex = 0;
   const exercises: Exercise[] = [];
   for (const def of defs) {
-    const options = def.byEquipment[profile.equipment];
+    const options = def.byEquipment[equipment];
     const all = [...new Set([...options.defaults, ...options.alternatives])];
     const rotated = def.finisher ? options.defaults[week % options.defaults.length] : options.defaults[p % options.defaults.length];
     const chosen = swaps[def.slot] && all.includes(swaps[def.slot] as MovementId) ? swaps[def.slot] : rotated;
@@ -598,17 +642,22 @@ function strength(id: string, title: string, defs: SlotDef[], day: number, profi
     let sets: number;
     if (def.finisher) sets = rx.setsFinisher;
     else sets = coreIndex < 3 ? rx.setsMain : rx.setsLate;
+    if (cardio) sets = def.finisher ? 0 : Math.min(3, sets);
     if (opts.reentry) sets = def.finisher ? 0 : 2;
-    if (opts.short) sets = def.finisher ? 0 : Math.max(2, sets - 1);
+    if (short) sets = def.finisher ? 0 : Math.max(2, sets - 1);
     const isFirst = !def.finisher && coreIndex === 0;
     if (!def.finisher) coreIndex++;
 
     if (sets === 0) continue;
-    if (opts.short && coreIndex > 4) continue;
+    if (short && coreIndex > 4) continue;
 
-    const reps = def.reps === 'main' ? rx.repsMain : rx.repsAccessory;
-    const unit = ['b-carry'].includes(def.slot) ? (p === 0 ? '30–40 sec' : p === 3 ? '45–60 sec' : '40–45 sec') : reps;
-    const perSide = ['a-single-leg', 'b-single-leg', 'a-core', 'c-core'].includes(def.slot) && !['plank', 'wall-sit', 'pallof-press'].includes(chosen) ? '/side' : '';
+    // Bodyweight ladders progress by rung, not by load, so the rep range stays put
+    const reps = cardio ? (def.reps === 'main' ? '8–12' : '10–15') : def.reps === 'main' ? rx.repsMain : rx.repsAccessory;
+    const timed = ['household-carry', 'plank', 'side-plank', 'wall-sit'].includes(chosen);
+    const unit = def.slot === 'b-carry' || (timed && (def.slot === 'm-carry' || def.slot === 'n-core')) ? (p === 0 ? '30–40 sec' : p === 3 ? '45–60 sec' : '40–45 sec') : reps;
+    const sidedSlot = ['a-single-leg', 'b-single-leg', 'a-core', 'c-core', 'n-single-leg', 'n-core', 'm-carry'].includes(def.slot);
+    const sidedMovement = cardio && /split-squat|lunge|step-up|single-leg|household|side-plank|bird-dog|dead-bug/.test(chosen);
+    const perSide = (sidedSlot || sidedMovement) && !['plank', 'wall-sit', 'pallof-press'].includes(chosen) ? '/side' : '';
 
     exercises.push({
       slot: def.slot,
@@ -617,28 +666,155 @@ function strength(id: string, title: string, defs: SlotDef[], day: number, profi
       prescription: `${sets} × ${unit}${perSide}`,
       sets,
       reps: unit,
-      rest: isFirst && rx.restFirstSlot ? rx.restFirstSlot : rx.rest,
+      rest: cardio ? '60 s' : isFirst && rx.restFirstSlot ? rx.restFirstSlot : rx.rest,
       finisher: !!def.finisher,
     });
   }
 
-  const notes = [PHASES[p].focus, 'When every set hits the top of the rep range with clean form, add the smallest step next time.'];
-  if (opts.reentry) notes.unshift('Lighter re-entry: two sets per movement, about 10% less weight than last time. That’s the plan, not a penalty.');
+  const notes = cardio
+    ? ['Twenty minutes, five movements. Each one climbs a rung every phase; swap down a rung any time the reps aren’t clean, up a rung when the top of the range feels easy.']
+    : [PHASES[p].focus, 'When every set hits the top of the rep range with clean form, add the smallest step next time.'];
+  if (opts.reentry) notes.unshift(cardio ? 'Lighter re-entry: two sets per movement, easier rung if you like. That’s the plan, not a penalty.' : 'Lighter re-entry: two sets per movement, about 10% less weight than last time. That’s the plan, not a penalty.');
   if (opts.holdPhase) notes.unshift('Easing back in: this week runs at the previous phase’s sets and effort.');
-  if (day >= 70) notes.push('Final week: repeat your loads, no new increases. Finish strong and clean.');
+  if (day >= 70 && !cardio) notes.push('Final week: repeat your loads, no new increases. Finish strong and clean.');
 
   return {
     id,
     kind: 'strength',
     title,
-    length: opts.short || opts.reentry ? 'about 20–25 min' : p >= 2 ? 'about 45 min' : 'about 35–40 min',
+    length: cardio ? 'about 20 min' : short || opts.reentry ? 'about 20–25 min' : p >= 2 ? 'about 45 min' : 'about 35–40 min',
     exercises,
-    effort: rx.effort,
-    rest: rx.rest,
+    effort: cardio ? 'Stop each set with 2–3 clean reps left. Quality over count.' : rx.effort,
+    rest: cardio ? '60 s' : rx.rest,
     notes,
-    short: opts.short,
+    short,
     reentry: opts.reentry,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Cardio-only track: the cardio days
+// ---------------------------------------------------------------------------
+
+function cardioModeName(profile: Profile): string {
+  return profile.cardioMode === 'walk' ? 'Walk or jog' : profile.cardioMode === 'row' ? 'Rower' : 'Bike';
+}
+
+/** Program days that are self-tests on the cardio track: start of week 1, start of week 11 */
+export const CARDIO_TEST_DAYS = [2, 72];
+
+function cardioSelfTest(day: number, profile: Profile): Session {
+  const bike = profile.cardioMode === 'bike';
+  const first = day === CARDIO_TEST_DAYS[0];
+  return {
+    id: 'cardio-test',
+    kind: 'conditioning',
+    title: 'Self-test',
+    length: 'about 30 min',
+    blocks: [
+      { label: 'Warm-up', detail: '5–8 min easy' },
+      { label: 'The test', detail: bike ? 'Ride 20 minutes at the hardest pace you can hold the whole way. Note the distance.' : `Cover 2 km (1.25 miles) as fast as you can ${profile.cardioMode === 'row' ? 'row' : 'walk or run'}. Note the time.` },
+      { label: 'Cool-down', detail: '5 min easy' },
+    ],
+    effort: 'Hard but even. Start a touch slower than feels right; the second half is where it’s won.',
+    notes: [first ? 'This is your starting line, nothing more. You’ll do it again in week 11 and compare.' : 'Same test as week 1. Whatever the number says, it’s against Day 2, nobody else.'],
+    test: { prompt: bike ? 'Distance in 20 min' : 'Time for 2 km', placeholder: bike ? 'e.g. 6.4 mi' : 'e.g. 11:42' },
+  };
+}
+
+/** Tuesday and Saturday on the cardio track: duration first, then one interval day, then two */
+function cardioIntervals(day: number, profile: Profile, opts: SessionOptions, saturday: boolean): Session {
+  if (!saturday && CARDIO_TEST_DAYS.includes(day) && !opts.reentry) return cardioSelfTest(day, profile);
+  const week = opts.holdPhase ? Math.max(0, weekOf(day) - 1) : weekOf(day);
+  const mode = cardioModeName(profile);
+
+  // Easy-only weeks (and Saturday until week 7) just build minutes
+  const easyMinutes = [15, 20, 25, 25, 30, 30, 30, 35, 35, 40, 40][Math.min(week, 10)];
+  const easy = (): Session => ({
+    id: saturday ? 'cardio-easy-sat' : 'cardio-easy-tue',
+    kind: 'conditioning',
+    title: `${mode}, easy`,
+    length: `about ${easyMinutes + 10} min`,
+    blocks: [
+      { label: 'Warm-up', detail: '5 min easy' },
+      { label: 'Easy', detail: `${easyMinutes} min at a pace where you could talk in full sentences` },
+      { label: 'Cool-down', detail: '5 min easy' },
+    ],
+    effort: 'Easy means easy: about a 3–4 out of 10. Walking breaks are fine.',
+    notes: week < 3 ? ['Weeks 1–3 build minutes only. Intervals start in week 4, once the easy minutes feel normal.'] : ['Minutes before speed. This is the day that makes the hard days possible.'],
+    reentry: opts.reentry,
+  });
+
+  if (opts.reentry) {
+    return { ...easy(), title: `${mode}, easy`, length: 'about 20 min', blocks: [{ label: 'Easy', detail: '15 min easy, walking breaks whenever you like' }], notes: ['Lighter day after time away. That’s the plan, not a penalty.'] };
+  }
+  if (week < 3) return easy();
+  if (saturday && week < 6) return easy();
+
+  // Interval ladder, Couch-to-5K style: short efforts first, then longer, then 3-minute blocks
+  const tue = [
+    '6 rounds: 1 min brisk / 2 min easy',
+    '6 rounds: 90 sec brisk / 90 sec easy',
+    '8 rounds: 90 sec brisk / 90 sec easy',
+    '8 rounds: 2 min hard / 1 min easy',
+    '5 rounds: 3 min hard / 2 min easy',
+    '6 rounds: 3 min hard / 2 min easy',
+    '3 rounds: 3 min hard / 3 min easy',
+    '4 rounds: 3 min hard / 3 min easy',
+  ];
+  const sat = ['8 rounds: 1 min hard / 1 min easy', '10 rounds: 1 min hard / 1 min easy', '10 rounds: 1 min hard / 1 min easy', '12 rounds: 1 min hard / 1 min easy', '12 rounds: 1 min hard / 1 min easy'];
+  const intervals = saturday ? sat[Math.min(week - 6, sat.length - 1)] : tue[Math.min(week - 3, tue.length - 1)];
+  const effort = week < 6 ? 'Brisk means you could still speak in short sentences.' : week < 9 ? 'Hard efforts at about a 7 out of 10.' : 'Hard but controlled, about an 8 out of 10. Even pacing across rounds.';
+  const length = week < 6 ? 'about 30 min' : week < 9 ? 'about 30–35 min' : 'about 35 min';
+
+  return {
+    id: saturday ? 'cardio-intervals-sat' : 'cardio-intervals-tue',
+    kind: 'conditioning',
+    title: `${mode} Intervals`,
+    length,
+    blocks: [
+      { label: 'Warm-up', detail: '5 min easy' },
+      { label: 'Easy base', detail: '5 min easy' },
+      { label: 'Intervals', detail: intervals },
+      { label: 'Cool-down', detail: '5 min easy' },
+    ],
+    effort,
+    notes: ['Duration first, intensity second. The goal is to build conditioning, not test it.'],
+  };
+}
+
+/** Wednesday on the cardio track: an easy session that grows five minutes a phase */
+function cardioEasyDay(day: number, profile: Profile, opts: SessionOptions): Session {
+  const p = opts.holdPhase ? Math.max(0, phaseIndex(day) - 1) : phaseIndex(day);
+  const minutes = [20, 25, 30, 35][p];
+  return {
+    id: 'cardio-easy-wed',
+    kind: 'conditioning',
+    title: `${cardioModeName(profile)}, easy`,
+    length: opts.reentry ? 'about 15 min' : `about ${minutes} min`,
+    blocks: [{ label: 'Easy', detail: opts.reentry ? '15 min easy, walking breaks whenever you like' : `${minutes} min at a pace where you could talk in full sentences. A different route or a podcast helps.` }],
+    effort: 'About a 3–4 out of 10. Finish feeling better than you started.',
+    notes: ['Counts toward your steps. The point is minutes on your feet, not pace.'],
+    reentry: opts.reentry,
+  };
+}
+
+/** The cardio-only week: movement sessions Mon and Fri, cardio Tue/Wed/Sat, easy Thu, rest Sun */
+function cardioTrackSession(day: number, profile: Profile, swaps: Swaps, opts: SessionOptions): Session {
+  switch ((day - 1) % 7) {
+    case 0:
+      return strength('movement-a', 'Movement A', MOVEMENT_A, day, profile, swaps, opts);
+    case 1:
+      return cardioIntervals(day, profile, opts, false);
+    case 2:
+      return cardioEasyDay(day, profile, opts);
+    case 4:
+      return strength('movement-b', 'Movement B', MOVEMENT_B, day, profile, swaps, opts);
+    case 5:
+      return cardioIntervals(day, profile, opts, true);
+    default:
+      return baseSession(day, { ...profile, equipment: 'bodyweight' }, swaps, opts);
+  }
 }
 
 /** Tuesday: easy base plus short intervals */
@@ -802,7 +978,8 @@ const shoulder: Adjust = (session, swaps) => {
 const ADJUSTMENTS: Record<Limitation, Adjust> = { 'lower-back': lowerBack, knee, shoulder };
 
 export function sessionForDay(day: number, profile: Profile, swaps: Swaps = {}, opts: SessionOptions = {}): Session {
-  return profile.limitations.reduce((s, l) => ADJUSTMENTS[l](s, swaps), baseSession(day, profile, swaps, opts));
+  const base = isCardioTrack(profile) ? cardioTrackSession(day, profile, swaps, opts) : baseSession(day, profile, swaps, opts);
+  return profile.limitations.reduce((s, l) => ADJUSTMENTS[l](s, swaps), base);
 }
 
 // ---------------------------------------------------------------------------

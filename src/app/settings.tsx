@@ -16,6 +16,7 @@ const EQUIPMENT: { id: Equipment; label: string; hint: string }[] = [
   { id: 'home', label: 'Home gym', hint: 'Dumbbells, kettlebells, a bench; maybe a bar and rack' },
   { id: 'gym', label: 'Full gym', hint: 'Barbells, machines, cables' },
   { id: 'bodyweight', label: 'Bodyweight', hint: 'No equipment, or travelling' },
+  { id: 'cardio', label: 'Cardio only', hint: 'Same calendar. Monday and Friday become 20-minute bodyweight sessions; Tuesday, Wednesday and Saturday are bike, walk or row, building from easy minutes to intervals.' },
 ];
 const CARDIO: { id: CardioMode; label: string }[] = [
   { id: 'bike', label: 'Bike' },
@@ -87,7 +88,7 @@ export default function SettingsScreen() {
           <View style={styles.stack}>
             <ThemedText>Equipment</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Same 75 days for everyone. This only changes which movement fills each slot.
+              Same 75 days for everyone. This changes which movement fills each slot, or, for cardio only, what the lifting days become.
             </ThemedText>
             <View style={styles.chips}>
               {EQUIPMENT.map((e) => (
