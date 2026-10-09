@@ -1,8 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-    <rect width="1024" height="1024" rx="0" fill="#2F7D5B"/>
-    <g transform="translate(0 0) scale(1)">
-    <g fill="none" stroke="#F4F1EA" stroke-width="72" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M 210 720 C 330 720, 390 580, 490 500 S 650 380, 740 316" />
-      <path d="M 600 282 L 740 316 L 706 456" />
-    </g></g>
-  </svg>
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0.3" y2="1">
+        <stop offset="0" stop-color="#8AD08A"/>
+        <stop offset="0.6" stop-color="#4FAE6E"/>
+        <stop offset="1" stop-color="#3A9A62"/>
+      </linearGradient>
+      <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#2F8A5A"/>
+        <stop offset="1" stop-color="#236B48"/>
+      </linearGradient>
+      <linearGradient id="hillFront" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#226A47"/>
+        <stop offset="1" stop-color="#154732"/>
+      </linearGradient>
+      <linearGradient id="ribbon" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#CFE6D3"/>
+        <stop offset="0.45" stop-color="#F4F1EA"/>
+        <stop offset="1" stop-color="#F4F1EA"/>
+      </linearGradient>
+      <clipPath id="clip"><rect width="1024" height="1024" rx="230"/></clipPath>
+    </defs>
+    <rect width="1024" height="1024" rx="230" fill="url(#sky)"/>
+    <g clip-path="url(#clip)">
+      <!-- back hill -->
+      <path d="M -60 560 C 160 420, 420 450, 640 540 S 960 600, 1100 520 L 1100 1100 L -60 1100 Z" fill="url(#hillBack)"/>
+      <!-- front hill -->
+      <path d="M -60 740 C 220 620, 540 660, 780 720 S 1020 780, 1100 740 L 1100 1100 L -60 1100 Z" fill="url(#hillFront)"/>
+      <!-- the path: wide at the bottom-left, narrowing as it rises to meet the arrow -->
+      <path d="M 150 1024 C 230 840, 380 650, 615 393 L 689 475 C 480 640, 430 850, 400 1024 Z" fill="url(#ribbon)"/>
+      <!-- arrowhead: apex up-right, base square to the ribbon -->
+      <path d="M 800 300 L 732 523 L 572 345 Z" fill="#F4F1EA"/>
+    </g></svg>

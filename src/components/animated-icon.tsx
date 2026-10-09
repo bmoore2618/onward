@@ -5,7 +5,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
-const BRAND_GREEN = '#2F7D5B';
+/** Matches the native splash background in app.json */
+const SPLASH_BG = '#E9F3EA';
 const DURATION = 500;
 
 /**
@@ -53,10 +54,10 @@ export function AnimatedSplashOverlay() {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: BRAND_GREEN,
+    backgroundColor: SPLASH_BG,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
   },
-  mark: { width: 120, height: 120 },
+  mark: { width: 140, height: 140 },
 });
