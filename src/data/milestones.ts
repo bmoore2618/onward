@@ -22,6 +22,8 @@ export const MILESTONES: Milestone[] = [
   { id: 'build', title: 'Build', glyph: 'II', how: `Reach the end of the Build phase (Day ${PHASES[1].lastDay}).` },
   { id: 'first-pr', title: 'Stronger', glyph: '↑', how: 'Lift more than you did the first time, on any movement.' },
   { id: 'full-week', title: 'All five', glyph: '5', how: 'Tick all five habits on five days in one week.' },
+  { id: 'standard-week', title: 'The standard', glyph: '6/6', how: 'A full week: every session and 90% of habits.' },
+  { id: 'standard-3', title: 'Three in a row', glyph: '×3', how: 'Three full weeks back to back.' },
   { id: 'days-50', title: '50 days', glyph: '50', how: 'Complete 50 days.' },
   { id: 'push', title: 'Push', glyph: 'III', how: `Reach the end of the Push phase (Day ${PHASES[2].lastDay}).` },
   { id: 'momentum', title: 'Momentum', glyph: '≥2', how: 'Four weeks with two or more sessions each.' },

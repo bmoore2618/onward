@@ -18,14 +18,17 @@ export function WeekSummary({ date }: { date: string }) {
   const s = onward.weekSummary(date);
   const habitPct = s.habitsTotal ? Math.round((s.habitsDone / s.habitsTotal) * 100) : 0;
 
-  const line =
-    s.workoutsDone === s.trainingDays && s.trainingDays > 0
-      ? 'Every session done. That’s the whole game.'
+  const line = s.metStandard
+    ? 'Standard met. Every session, the habits with it. That’s the whole game.'
+    : s.workoutsDone === s.trainingDays && s.trainingDays > 0
+      ? `Every session done, habits at ${habitPct}%. The standard is 90%. Close it next week.`
       : s.workoutsDone >= s.trainingDays - 1 && s.trainingDays > 0
-        ? 'Nearly all of it. Life happened, the plan kept going.'
-        : s.workoutsDone > 0
-          ? 'Some weeks are like this. Next week starts fresh on Monday.'
-          : 'A quiet week. Monday is a clean start, no catching up needed.';
+        ? 'One session short of the standard. Nothing resets, but next week the bar is still all six.'
+        : s.workoutsDone >= 3
+          ? `${s.workoutsDone} of ${s.trainingDays}. That keeps the program working, but it’s the floor, not the standard. Monday is a clean start.`
+          : s.workoutsDone > 0
+            ? `${s.workoutsDone} of ${s.trainingDays}. Below three a week the program stops working. Monday: decide the sessions are happening.`
+            : 'A quiet week. Monday is a clean start, no catching up needed, and the standard is still all six.';
 
   const review = s.previous
     ? s.workoutsDone > s.previous.workoutsDone
@@ -39,6 +42,9 @@ export function WeekSummary({ date }: { date: string }) {
     <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
       <ThemedText type="smallBold" themeColor="textSecondary" style={styles.eyebrow}>
         WEEK {s.week} · {short(s.start)} – {short(s.end)}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        The standard: {s.trainingDays || 6} of {s.trainingDays || 6} sessions, all five habits every day.
       </ThemedText>
       <View style={styles.stats}>
         <Stat value={`${s.workoutsDone}/${s.trainingDays}`} label="workouts" />

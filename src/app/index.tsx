@@ -1,7 +1,7 @@
 import { openURL } from 'expo-linking';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIn } from '@/components/check-in';
@@ -16,7 +16,7 @@ import { SwapPicker } from '@/components/swap-picker';
 import { ThemedText } from '@/components/themed-text';
 import { WeekSummary } from '@/components/week-summary';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { checklistFor, MOBILITY_VIDEO_URL, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, type Exercise } from '@/data/program';
+import { checklistFor, MOBILITY_VIDEO_URL, PROGRAM_LENGTH_DAYS, phaseForDay, REST_DAY_VIDEO_URL, STANDARD, type Exercise } from '@/data/program';
 import { addDays, dateFromKey } from '@/data/storage';
 import { useOnward } from '@/hooks/use-onward';
 import { useTheme } from '@/hooks/use-theme';
@@ -148,7 +148,14 @@ export default function TodayScreen() {
                 style={[styles.shortToggle, { borderColor: v.short ? theme.accent : theme.border, backgroundColor: v.short ? theme.accentSoft : 'transparent' }]}>
                 <ThemedText type="smallBold">{v.short ? 'Short version on' : 'Short on time?'}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {v.short ? 'First four movements, one set fewer. Still counts as a full day.' : 'Tap for the 20–25 minute version. It counts.'}
+                  {(() => {
+                    const used = onward.shortsUsedInWeek(viewDate);
+                    const left = Math.max(0, STANDARD.shortPerWeek - used);
+                    if (v.short && left === 0) return `This is short number ${used + 1} this week. It counts as a partial day. Make it the full session if you can.`;
+                    if (v.short) return `First four movements, one set fewer. Counts as a full day (${left - 1} more short ${left - 1 === 1 ? 'day' : 'days'} this week).`;
+                    if (left === 0) return 'Both short days are used this week. A third would count as partial.';
+                    return `20–25 minutes, first four movements. Counts as a full day, up to ${STANDARD.shortPerWeek} a week. For crowded days, not tired ones.`;
+                  })()}
                 </ThemedText>
               </Pressable>
             )}
@@ -377,13 +384,22 @@ export default function TodayScreen() {
                 {v.isToday && !v.record && (
                   <>
                     <Pressable
-                      onPress={onward.completeToday}
+                      onPress={() => {
+                        if (session.kind !== 'rest' && !v.checklist.workout) {
+                          Alert.alert('Session not ticked', 'Save today as a partial day? The session stays on the calendar as not done.', [
+                            { text: 'Go back', style: 'cancel' },
+                            { text: 'Save as partial', onPress: onward.completeToday },
+                          ]);
+                          return;
+                        }
+                        onward.completeToday();
+                      }}
                       accessibilityRole="button"
                       style={({ pressed }) => [styles.completeButton, { backgroundColor: theme.accent }, pressed && { opacity: 0.8 }]}>
                       <ThemedText style={[styles.completeLabel, { color: theme.accentText }]}>Complete Day {v.day}</ThemedText>
                     </Pressable>
                     <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-                      Partial days count. Whatever you got done, log it and keep going.
+                      The standard is the session and all five habits. Log what you did either way; nothing resets.
                     </ThemedText>
                     {session.kind !== 'rest' && <SkipPreview />}
                     {!onward.status && <StatusSwitch />}

@@ -847,6 +847,19 @@ export function checklistFor(session: Session) {
 }
 
 /**
+ * The standard. Forgiving means nothing resets; it does not mean the bar
+ * moves. Every week: all training sessions, all habits, every day.
+ */
+export const STANDARD = {
+  /** Short versions that still count as full days in one week; beyond this they count as partial */
+  shortPerWeek: 2,
+  /** Sessions per week below which the program stops working; said out loud in the skip preview */
+  floorSessions: 3,
+  /** Habit completion a week needs (with every session) to count as a full week */
+  fullWeekHabits: 0.9,
+};
+
+/**
  * A day counts as completed if the planned session (or its short version)
  * was done, or on a rest day if three or more habits were ticked.
  */

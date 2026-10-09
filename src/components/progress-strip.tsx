@@ -31,6 +31,13 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
             of {weeks} weeks
           </ThemedText>
         </View>
+        <View style={styles.stat}>
+          <ThemedText style={styles.big}>{s.fullWeeks}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            full {s.fullWeeks === 1 ? 'week' : 'weeks'}
+            {s.bestRun > 1 ? ` · run ${s.currentRun}` : ''}
+          </ThemedText>
+        </View>
         <View style={styles.dots} accessibilityLabel="This week">
           {s.weekDots.map((d, i) => (
             <View key={i} style={styles.dotCol}>

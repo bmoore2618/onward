@@ -16,6 +16,7 @@ import {
   phaseForDay,
   PROGRAM_LENGTH_DAYS,
   resetLoad,
+  STANDARD,
   sessionForDay,
   type ChecklistId,
   type Session,
@@ -78,6 +79,9 @@ export type WeekSummary = {
   avgFeel: number | null;
   /** Same numbers for the previous full week, for the goal review */
   previous: { workoutsDone: number; trainingDays: number; habitsPct: number } | null;
+  /** Short versions used this week, and whether the week (so far) meets the standard */
+  shortsUsed: number;
+  metStandard: boolean;
 };
 
 export type LiftSuggestion = {
@@ -133,7 +137,17 @@ type Onward = {
   newMilestones: () => EarnedMilestone[];
   markMilestonesSeen: (ids: string[]) => void;
   /** Days completed so far (day-completion rule), and this week's Mon–Sun completion */
-  progressStrip: () => { daysCompleted: number; week: number; weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest' | 'paused')[]; line: LineContext };
+  progressStrip: () => {
+    daysCompleted: number;
+    week: number;
+    weekDots: ('done' | 'today' | 'missed' | 'future' | 'rest' | 'paused')[];
+    line: LineContext;
+    fullWeeks: number;
+    bestRun: number;
+    currentRun: number;
+  };
+  /** Short versions already used in the week containing a date (excluding that date) */
+  shortsUsedInWeek: (date: string) => number;
   status: AppState['status'];
   setStatus: (kind: StatusKind | null) => void;
   progressLayout: AppState['progressLayout'];
@@ -392,6 +406,19 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         if (sessions >= 2) { momentumWeeks++; if (momentumWeeks === 4 && !momentum) momentum = end; }
       }
 
+      // Full weeks against the standard
+      let standardWeek: string | null = null, standard3: string | null = null, run = 0;
+      for (let w = 0; w * 7 < PROGRAM_LENGTH_DAYS; w++) {
+        const start = addDays(profile.programStartDate, w * 7);
+        const end = addDays(start, 6);
+        if (end >= today) break;
+        if (summarizeWeek(start, end).metStandard) {
+          run++;
+          if (!standardWeek) standardWeek = end;
+          if (run === 3 && !standard3) standard3 = end;
+        } else run = 0;
+      }
+
       const firstWeighIn = Object.keys(state.bodyWeight).sort()[0] ?? null;
       const firstPhotos = state.photos.map((p) => p.date).sort()[0] ?? null;
       const shortDay = state.completed.find((r) => r.short && r.checklist.workout)?.date ?? null;
@@ -405,6 +432,8 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         build: phaseEnd(1),
         'first-pr': firstPr,
         'full-week': fullWeek,
+        'standard-week': standardWeek,
+        'standard-3': standard3,
         'days-50': nth(50),
         push: phaseEnd(2),
         momentum,
@@ -418,7 +447,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
 
     const summarizeWeek = (weekStart: string, last: string) => {
       const startDay = programDayFor(weekStart);
-      let workoutsDone = 0, trainingDays = 0, habitsDone = 0, habitsTotal = 0;
+      let workoutsDone = 0, trainingDays = 0, habitsDone = 0, habitsTotal = 0, shortsUsed = 0;
       const feels: number[] = [];
       const weights: number[] = [];
       for (let i = 0; i < 7; i++) {
@@ -431,13 +460,36 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         if (session.kind !== 'rest') {
           trainingDays++;
           if (record?.checklist.workout) workoutsDone++;
+          if (record?.checklist.workout && record.short) shortsUsed++;
         }
         const f = state.checkins[d]?.feel;
         if (f) feels.push(f);
         const w = parseFloat(state.bodyWeight[d] ?? '');
         if (Number.isFinite(w)) weights.push(w);
       }
-      return { workoutsDone, trainingDays, habitsDone, habitsTotal, feels, weights };
+      // The standard: every session (shorts beyond the allowance count as half) and 90% of habits
+      const effectiveSessions = workoutsDone - Math.max(0, shortsUsed - STANDARD.shortPerWeek) * 0.5;
+      const metStandard = trainingDays > 0 && effectiveSessions >= trainingDays && habitsTotal > 0 && habitsDone / habitsTotal >= STANDARD.fullWeekHabits;
+      return { workoutsDone, trainingDays, habitsDone, habitsTotal, feels, weights, shortsUsed, metStandard };
+    };
+
+    /** Full weeks so far (whole weeks only), the current run of them, and the best run */
+    const fullWeekStats = () => {
+      let fullWeeks = 0, currentRun = 0, bestRun = 0;
+      for (let w = 0; w * 7 < PROGRAM_LENGTH_DAYS; w++) {
+        const start = addDays(profile.programStartDate, w * 7);
+        const end = addDays(start, 6);
+        if (end >= today) break; // only finished weeks
+        const s = summarizeWeek(start, end);
+        if (s.metStandard) {
+          fullWeeks++;
+          currentRun++;
+          bestRun = Math.max(bestRun, currentRun);
+        } else {
+          currentRun = 0;
+        }
+      }
+      return { fullWeeks, currentRun, bestRun };
     };
 
     return {
@@ -474,8 +526,14 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
         if (!Number.isFinite(lb)) return { last, suggested: null, text: base };
         if (last.hit === 'hit') {
           const n = nextLoad(lb);
-          return isBigJump(lb, n)
-            ? { last, suggested: lb, text: `${base}, all reps hit → ${n} is a big step, so stay at ${last.lb} and work up to 15 reps first` }
+          const stalled = before?.hit === 'hit' && parseFloat(before.lb) === lb;
+          if (isBigJump(lb, n)) {
+            return stalled
+              ? { last, suggested: n, text: `${base}. Top of the range twice at ${last.lb}. Time to jump to ${n}, even if the reps drop.` }
+              : { last, suggested: lb, text: `${base}, all reps hit → ${n} is a big step, so stay at ${last.lb} and work up to 15 reps first` };
+          }
+          return stalled
+            ? { last, suggested: n, text: `${base}. Top of the range twice at ${last.lb}. Go to ${n} today; comfortable isn’t the goal.` }
             : { last, suggested: n, text: `${base}, all reps hit → try ${n}` };
         }
         if (last.hit === 'miss' && before?.hit === 'miss') {
@@ -510,7 +568,21 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
                 habitsPct: prevWeek.habitsTotal ? Math.round((prevWeek.habitsDone / prevWeek.habitsTotal) * 100) : 0,
               }
             : null,
+          shortsUsed: cur.shortsUsed,
+          metStandard: cur.metStandard,
         };
+      },
+
+      shortsUsedInWeek: (date) => {
+        const start = weekStartOf(date);
+        let n = 0;
+        for (let i = 0; i < 7; i++) {
+          const d = addDays(start, i);
+          if (d === date) continue;
+          const r = recordFor(d);
+          if (r?.short && r.checklist.workout) n++;
+        }
+        return n;
       },
 
       photos: state.photos,
@@ -661,7 +733,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           lowYesterday: (state.checkins[yesterday]?.feel ?? 3) <= 2,
           prYesterday,
         };
-        return { daysCompleted, week: Math.floor((Math.min(todayDay, PROGRAM_LENGTH_DAYS) - 1) / 7) + 1, weekDots, line };
+        return { daysCompleted, week: Math.floor((Math.min(todayDay, PROGRAM_LENGTH_DAYS) - 1) / 7) + 1, weekDots, line, ...fullWeekStats() };
       },
 
       status: state.status,

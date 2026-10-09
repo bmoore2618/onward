@@ -27,8 +27,8 @@ export function SkipPreview() {
     <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
       <ThemedText type="smallBold">If you skip today</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Nothing resets. Tomorrow is Day {p.tomorrowDay}, {p.tomorrow.title}, as planned. This week stays at {p.weekDone} of {p.weekTraining} sessions so far, and
-        the short version is always there if a crowded day is the problem.
+        Nothing resets. Tomorrow is Day {p.tomorrowDay}, {p.tomorrow.title}, as planned. This week stays at {p.weekDone} of {p.weekTraining} sessions, and the standard is all{' '}
+        {p.weekTraining}. Three a week is the floor; below that the program stops working. If time is the problem, the short version is 20 minutes and counts.
       </ThemedText>
       <Pressable onPress={() => setOpen(false)} hitSlop={8} accessibilityRole="button" style={styles.close}>
         <ThemedText type="smallBold" style={{ color: theme.accent }}>

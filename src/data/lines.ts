@@ -7,7 +7,7 @@ import type { StatusKind } from '@/data/storage';
  * by day so the same line never shows two days running. Written in the
  * app's voice: adult, encouraging, never militant.
  */
-const LINES: Record<SessionKind | 'any' | 'back' | 'low' | 'pr', string[]> = {
+const LINES: Record<SessionKind | 'any' | 'back' | 'low' | 'pr' | 'push', string[]> = {
   any: [
     'Missed yesterday? Continue today.',
     'You don’t restart. You adjust. You keep going.',
@@ -49,6 +49,16 @@ const LINES: Record<SessionKind | 'any' | 'back' | 'low' | 'pr', string[]> = {
     'Monday is a clean start. Not a reset, a start.',
     'Look back at the week. Then let it go.',
   ],
+  push: [
+    'The last set should be hard. Was it?',
+    'Comfortable isn’t the goal this week. Two clean reps left, not five.',
+    'The standard is every session and every habit. Not most. Every.',
+    'If today’s weight felt easy, it was. Go up next time.',
+    'Short version is for crowded days, not tired ones.',
+    'Nobody drifts into shape. Decide the session is happening, then do it.',
+    'You already know what the easy version of today looks like. Do the other one.',
+    'Ten minutes of mobility is ten minutes. Stop negotiating with it.',
+  ],
   back: [
     'Welcome back. Today is the whole plan.',
     'A few days away changes nothing. Here’s today.',
@@ -87,7 +97,8 @@ export function dailyLine(day: number, kind: SessionKind, ctx: LineContext): str
   if (ctx.cameBack) return LINES.back[day % LINES.back.length];
   if (ctx.prYesterday) return LINES.pr[day % LINES.pr.length];
   if (ctx.lowYesterday && kind !== 'rest') return LINES.low[day % LINES.low.length];
-  // Alternate between the day-type pool and the general pool
+  // Every third training day gets a push; otherwise alternate the day-type pool and the general pool
+  if (day % 3 === 0 && kind !== 'rest' && kind !== 'recovery') return LINES.push[Math.floor(day / 3) % LINES.push.length];
   const pool = day % 2 === 0 ? LINES[kind] : LINES.any;
   return pool[Math.floor(day / 2) % pool.length];
 }

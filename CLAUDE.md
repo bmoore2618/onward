@@ -14,6 +14,7 @@ A fitness app (iOS first, App Store) for people getting back into shape after ti
 ## Voice and design
 - Calm, encouraging, adult. Never militant, shaming or "no excuses."
 - No streak-loss punishment. A missed day is shown neutrally and the plan simply continues.
+- **Forgiving, not soft (founder decision, Oct 2026).** It's a challenge. Nothing resets, but the bar doesn't move: the standard is every session and all five habits, every week, and the app says so plainly (`STANDARD` in program.ts). Leeway has limits: two short versions a week count fully, a third is partial; completing a training day without the session asks first; full weeks are counted with a run; progression tells you to go up when you've stalled; a "push" line appears every third training day. Forgiveness is about what happens after a miss, never about lowering what a good week is.
 - Clean, uncluttered UI with big tap targets. Should feel approachable to someone who hasn't trained in years.
 
 ## Tech stack
