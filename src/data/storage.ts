@@ -64,6 +64,8 @@ export type AppState = {
   statusHistory: { kind: StatusKind; since: string; until: string }[];
   /** Order of the Progress tab's sections and which are hidden */
   progressLayout: { id: ProgressSectionId; hidden?: boolean }[];
+  /** First-open setup finished */
+  onboarded: boolean;
 };
 
 export type ProgressSectionId = 'stats' | 'milestones' | 'weight' | 'lifts' | 'photos' | 'habits' | 'calendar';
@@ -96,6 +98,7 @@ export const INITIAL_STATE: AppState = {
   status: null,
   statusHistory: [],
   progressLayout: DEFAULT_PROGRESS_LAYOUT,
+  onboarded: false,
 };
 
 export async function loadState(): Promise<AppState> {
@@ -118,6 +121,8 @@ export async function loadState(): Promise<AppState> {
   return {
     ...INITIAL_STATE,
     ...rest,
+    // Installs from before onboarding existed already have a profile and data
+    onboarded: rest.onboarded ?? ((rest.completed?.length ?? 0) > 0 || !!saved.profile),
     completed: (rest.completed ?? []).map((r) => ({ ...r, checklist: migrate(r.checklist) })),
     // Photos saved before poses existed count as "front"
     photos: (rest.photos ?? []).map((p) => ({ ...p, pose: p.pose ?? 'front' })),

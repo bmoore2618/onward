@@ -1,10 +1,17 @@
 /**
- * Who the plan is for and how the app behaves. Saved on the device and
- * edited on the Settings tab; DEFAULT_PROFILE holds the founder's settings
- * until a real onboarding exists. Limitations adjust exercise choices and
- * notes as comfort preferences (see ADJUSTMENTS in program.ts); with none,
- * everyone gets the standard program.
+ * Who the plan is for and how the app behaves. Set during onboarding, saved
+ * on the device, edited on the Settings tab. DEFAULT_PROFILE is the general
+ * starting point (no limitations, home gym). Limitations adjust exercise
+ * choices and notes as comfort preferences (see ADJUSTMENTS in program.ts).
  */
+
+/** The next Monday on or after a date, as YYYY-MM-DD (Day 1 should be a Monday) */
+export function nextMonday(from = new Date()): string {
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const add = (8 - d.getDay()) % 7 || 7;
+  d.setDate(d.getDate() + add);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export type Limitation = 'lower-back' | 'knee' | 'shoulder';
 
@@ -14,6 +21,8 @@ export type Equipment = 'home' | 'gym' | 'bodyweight';
 export type CardioMode = 'bike' | 'walk' | 'row';
 
 export type Profile = {
+  /** First name, optional; used in greetings */
+  name: string;
   /**
    * Local date of program Day 1, YYYY-MM-DD. The program follows the
    * calendar from here, so this should be a Monday to put Strength A on
@@ -36,11 +45,12 @@ export type Profile = {
 };
 
 export const DEFAULT_PROFILE: Profile = {
+  name: '',
   programStartDate: '2026-09-28',
   equipment: 'home',
   cardioMode: 'bike',
-  hasHeavyBag: true,
-  limitations: ['lower-back'],
+  hasHeavyBag: false,
+  limitations: [],
   weighInWeekdays: [1, 4],
   goalWeight: '',
   notificationsEnabled: true,

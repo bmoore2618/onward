@@ -1,13 +1,24 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Modal, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { Onboarding } from '@/components/onboarding';
 import { Colors } from '@/constants/theme';
-import { OnwardProvider } from '@/hooks/use-onward';
+import { OnwardProvider, useOnward } from '@/hooks/use-onward';
 
 SplashScreen.preventAutoHideAsync();
+
+/** Shows first-open setup over the tabs until it's finished */
+function OnboardingGate() {
+  const onward = useOnward();
+  return (
+    <Modal visible={onward.loaded && !onward.onboarded} animationType="fade" presentationStyle="fullScreen">
+      <Onboarding />
+    </Modal>
+  );
+}
 
 export default function RootLayout() {
   const scheme = useColorScheme();
@@ -31,6 +42,7 @@ export default function RootLayout() {
             <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
           </NativeTabs.Trigger>
         </NativeTabs>
+        <OnboardingGate />
       </OnwardProvider>
     </ThemeProvider>
   );

@@ -83,11 +83,24 @@ export default function TodayScreen() {
         {!inProgram ? (
           <View style={styles.doneWrap}>
             <ThemedText style={[styles.heading, styles.centered]}>
-              {v.day > PROGRAM_LENGTH_DAYS ? `All ${PROGRAM_LENGTH_DAYS} days are behind you.` : 'Before Day 1.'}
+              {v.day > PROGRAM_LENGTH_DAYS
+                ? `All ${PROGRAM_LENGTH_DAYS} days are behind you.`
+                : `Day 1 is ${dateFromKey(onward.profile.programStartDate).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}.`}
             </ThemedText>
             <ThemedText themeColor="textSecondary" style={styles.centered}>
-              {v.day > PROGRAM_LENGTH_DAYS ? 'Your next program is coming. Keep moving in the meantime. Onward.' : 'The program starts on your chosen start date (see Settings).'}
+              {v.day > PROGRAM_LENGTH_DAYS
+                ? 'Your next program is coming. Keep moving in the meantime. Onward.'
+                : v.day === 0
+                  ? 'Tomorrow. Tonight: nothing special. Maybe set out your shoes.'
+                  : `${1 - v.day} days to go. Until then, an easy walk counts, and the Progress tab is ready for a first weigh-in or photos. You can change the date in Settings.`}
             </ThemedText>
+            {v.day < 1 && (
+              <Pressable onPress={() => setViewDate(onward.profile.programStartDate)} hitSlop={8} accessibilityRole="button" style={styles.previewLink}>
+                <ThemedText type="small" style={{ color: theme.accent }}>
+                  Preview Day 1
+                </ThemedText>
+              </Pressable>
+            )}
           </View>
         ) : (
           <>
@@ -489,4 +502,5 @@ const styles = StyleSheet.create({
   completeLabel: { fontSize: 20, fontWeight: 700 },
   centered: { textAlign: 'center' },
   doneWrap: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.six },
+  previewLink: { minHeight: 44, justifyContent: 'center', marginTop: Spacing.two },
 });

@@ -57,8 +57,21 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <ThemedText style={styles.heading}>Settings</ThemedText>
 
-        <ThemedText style={styles.sectionTitle}>Goal</ThemedText>
+        <ThemedText style={styles.sectionTitle}>You</ThemedText>
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Row label="First name" hint="Optional">
+            <TextInput
+              value={profile.name}
+              onChangeText={(t) => setProfile({ name: t })}
+              placeholder="–"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="words"
+              returnKeyType="done"
+              style={[styles.dateInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+              accessibilityLabel="First name"
+            />
+          </Row>
+          <Divider />
           <Row label="Goal weight" hint="The chart shows a steady 0.5–1 lb a week pace toward it">
             <Field value={profile.goalWeight} onChangeText={(t) => setProfile({ goalWeight: t.replace(/[^0-9.]/g, '') })} unit="lb" width={64} label="Goal weight in pounds" />
           </Row>
@@ -177,6 +190,11 @@ export default function SettingsScreen() {
           </Row>
         </View>
 
+        <Pressable onPress={onward.restartOnboarding} hitSlop={8} accessibilityRole="button" style={styles.footerLink}>
+          <ThemedText type="small" style={{ color: theme.accent }}>
+            Run setup again
+          </ThemedText>
+        </Pressable>
         <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
           If you’ve been inactive for a long time or were told to limit activity, check with your doctor before starting.
         </ThemedText>
@@ -276,4 +294,5 @@ const styles = StyleSheet.create({
   stepArrow: { fontSize: 28, lineHeight: 32 },
   stepValue: { fontSize: 16, fontWeight: 600, minWidth: 76, textAlign: 'center' },
   footer: { textAlign: 'center', marginTop: Spacing.four },
+  footerLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: Spacing.four },
 });

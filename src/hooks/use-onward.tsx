@@ -137,6 +137,10 @@ type Onward = {
   setStatus: (kind: StatusKind | null) => void;
   progressLayout: AppState['progressLayout'];
   setProgressLayout: (layout: AppState['progressLayout']) => void;
+  onboarded: boolean;
+  /** Finish (or re-run) first-open setup with the chosen profile */
+  finishOnboarding: (profile: Profile) => void;
+  restartOnboarding: () => void;
   /** Whether a date fell inside a status (away/sick/injured) */
   pausedOn: (date: string) => StatusKind | null;
   /** What skipping today means, in plain numbers */
@@ -668,6 +672,10 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
 
       progressLayout: state.progressLayout,
       setProgressLayout: (layout) => update((prev) => ({ ...prev, progressLayout: layout })),
+
+      onboarded: state.onboarded,
+      finishOnboarding: (p) => update((prev) => ({ ...prev, profile: p, onboarded: true })),
+      restartOnboarding: () => update((prev) => ({ ...prev, onboarded: false })),
 
       skipPreview: () => {
         const day = programDayFor(today);

@@ -51,6 +51,7 @@ export function ProgressStrip({ day, kind }: { day: number; kind: SessionKind })
         </View>
       </View>
       <ThemedText type="small" themeColor="textSecondary" style={styles.line}>
+        {onward.profile.name ? `${onward.profile.name}, ` : ''}
         {dailyLine(day, kind, s.line)}
       </ThemedText>
     </View>
