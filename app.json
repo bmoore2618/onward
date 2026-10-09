@@ -35,9 +35,15 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#E9F3EA",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 140
+          "backgroundColor": "#E4F3E2",
+          "image": "./assets/images/splash.png",
+          "resizeMode": "cover",
+          "enableFullScreenImage_legacy": true,
+          "android": {
+            "image": "./assets/images/splash-icon.png",
+            "imageWidth": 160,
+            "resizeMode": "contain"
+          }
         }
       ],
       "expo-sharing"
