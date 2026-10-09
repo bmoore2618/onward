@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { backupSummary, exportBackup, restoreBackup } from '@/data/backup';
 import type { CardioMode, Equipment, Limitation } from '@/data/profile';
 import { PROGRAM_LENGTH_DAYS } from '@/data/program';
 import { dateFromKey, isValidDateKey } from '@/data/storage';
@@ -38,6 +39,7 @@ export default function SettingsScreen() {
   const onward = useOnward();
   const { profile, setProfile } = onward;
   const [startDraft, setStartDraft] = useState(profile.programStartDate);
+  const [busy, setBusy] = useState(false);
 
   const startValid = isValidDateKey(startDraft);
   const startIsMonday = startValid && dateFromKey(startDraft).getDay() === 1;
@@ -190,6 +192,68 @@ export default function SettingsScreen() {
           </Row>
         </View>
 
+        <ThemedText style={styles.sectionTitle}>Backup</ThemedText>
+        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Row label="Export backup" hint={`One file with everything: ${backupSummary({ days: onward.completed.length, weighIns: onward.bodyWeight.length, photos: onward.photos.length })}. Save it to iCloud Drive or email it to yourself.`}>
+            <Pressable
+              onPress={async () => {
+                if (busy) return;
+                setBusy(true);
+                try {
+                  const ok = await exportBackup();
+                  if (!ok) Alert.alert('Can’t share here', 'Sharing isn’t available on this device.');
+                } catch {
+                  Alert.alert('Export failed', 'Something went wrong writing the backup. Try again.');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+              disabled={busy}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.button, { backgroundColor: theme.accent }, (pressed || busy) && { opacity: 0.7 }]}>
+              <ThemedText type="smallBold" style={{ color: theme.accentText }}>
+                Export
+              </ThemedText>
+            </Pressable>
+          </Row>
+          <Divider />
+          <Row label="Restore from backup" hint="Replaces everything in the app with the backup. Export first if you want to keep what’s here.">
+            <Pressable
+              onPress={() =>
+                Alert.alert('Restore a backup?', 'Everything currently in the app will be replaced by the backup file you choose.', [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Choose file',
+                    onPress: async () => {
+                      if (busy) return;
+                      setBusy(true);
+                      try {
+                        const r = await restoreBackup();
+                        if (r.ok) {
+                          await onward.reloadState();
+                          Alert.alert('Restored', r.summary);
+                        } else if (r.reason !== 'cancelled') {
+                          Alert.alert('Nothing restored', r.reason);
+                        }
+                      } catch {
+                        Alert.alert('Nothing restored', 'Something went wrong reading that file.');
+                      } finally {
+                        setBusy(false);
+                      }
+                    },
+                  },
+                ])
+              }
+              disabled={busy}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.button, styles.buttonOutline, { borderColor: theme.accent }, (pressed || busy) && { opacity: 0.7 }]}>
+              <ThemedText type="smallBold" style={{ color: theme.accent }}>
+                Restore
+              </ThemedText>
+            </Pressable>
+          </Row>
+        </View>
+
         <Pressable onPress={onward.restartOnboarding} hitSlop={8} accessibilityRole="button" style={styles.footerLink}>
           <ThemedText type="small" style={{ color: theme.accent }}>
             Run setup again
@@ -293,6 +357,8 @@ const styles = StyleSheet.create({
   stepButton: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
   stepArrow: { fontSize: 28, lineHeight: 32 },
   stepValue: { fontSize: 16, fontWeight: 600, minWidth: 76, textAlign: 'center' },
+  button: { minHeight: 44, borderRadius: 12, paddingHorizontal: Spacing.three, justifyContent: 'center', alignItems: 'center' },
+  buttonOutline: { backgroundColor: 'transparent', borderWidth: 1.5 },
   footer: { textAlign: 'center', marginTop: Spacing.four },
   footerLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: Spacing.four },
 });

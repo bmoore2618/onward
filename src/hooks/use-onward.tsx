@@ -141,6 +141,8 @@ type Onward = {
   /** Finish (or re-run) first-open setup with the chosen profile */
   finishOnboarding: (profile: Profile) => void;
   restartOnboarding: () => void;
+  /** Re-read everything from the device, e.g. after restoring a backup */
+  reloadState: () => Promise<void>;
   /** Whether a date fell inside a status (away/sick/injured) */
   pausedOn: (date: string) => StatusKind | null;
   /** What skipping today means, in plain numbers */
@@ -676,6 +678,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
       onboarded: state.onboarded,
       finishOnboarding: (p) => update((prev) => ({ ...prev, profile: p, onboarded: true })),
       restartOnboarding: () => update((prev) => ({ ...prev, onboarded: false })),
+      reloadState: async () => setState(await loadState()),
 
       skipPreview: () => {
         const day = programDayFor(today);
