@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIn } from '@/components/check-in';
 import { NewMilestoneCard } from '@/components/milestones';
+import { MovedAnyway } from '@/components/moved-anyway';
 import { PhaseRecap } from '@/components/phase-recap';
 import { ProgressStrip } from '@/components/progress-strip';
 import { SkipPreview } from '@/components/skip-preview';
@@ -388,6 +389,7 @@ export default function TodayScreen() {
                     {!onward.status && <StatusSwitch />}
                   </>
                 )}
+                {session.kind !== 'rest' && v.isPast && !v.checklist.workout && <MovedAnyway date={viewDate} />}
               </>
             )}
 

@@ -184,11 +184,25 @@ export default function SettingsScreen() {
           </Row>
           <Divider />
           <Row label="Evening reminder" hint="“Tomorrow: Strength B, about 40 min”">
-            <Stepper value={profile.eveningHour} onChange={(h) => setProfile({ eveningHour: h })} label="Evening reminder hour" />
+            <Switch value={profile.notifyEvening} onValueChange={(on) => setProfile({ notifyEvening: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Evening reminder" />
           </Row>
+          {profile.notifyEvening && (
+            <Row label="Evening time">
+              <Stepper value={profile.eveningHour} onChange={(h) => setProfile({ eveningHour: h })} label="Evening reminder hour" />
+            </Row>
+          )}
           <Divider />
           <Row label="Morning reminder" hint="“Day 9: Conditioning is ready”">
-            <Stepper value={profile.morningHour} onChange={(h) => setProfile({ morningHour: h })} label="Morning reminder hour" />
+            <Switch value={profile.notifyMorning} onValueChange={(on) => setProfile({ notifyMorning: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Morning reminder" />
+          </Row>
+          {profile.notifyMorning && (
+            <Row label="Morning time">
+              <Stepper value={profile.morningHour} onChange={(h) => setProfile({ morningHour: h })} label="Morning reminder hour" />
+            </Row>
+          )}
+          <Divider />
+          <Row label="Sunday week wrap" hint="“Week 2 wrap: 5 of 6 workouts, −1.2 lb.” Sent at the morning time.">
+            <Switch value={profile.notifyWeekWrap} onValueChange={(on) => setProfile({ notifyWeekWrap: on })} trackColor={{ true: theme.accent }} accessibilityLabel="Sunday week wrap" />
           </Row>
         </View>
 

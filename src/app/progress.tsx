@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FEEL_LABELS } from '@/components/check-in';
 import { LayoutEditor } from '@/components/layout-editor';
 import { MilestoneGrid } from '@/components/milestones';
+import { MOVED_LABELS } from '@/components/moved-anyway';
 import { ProgressPhotos } from '@/components/progress-photos';
 import { ThemedText } from '@/components/themed-text';
 import { WeightChart } from '@/components/weight-chart';
@@ -108,6 +109,7 @@ export default function ProgressScreen() {
     if (!record) return 'missed';
     const needed = checklistFor(session).length;
     const got = Object.values(record.checklist).filter(Boolean).length;
+    if (got === 0 && record.movedAnyway) return 'partial';
     if (got === 0) return 'missed';
     return got >= needed || dayCounts(session, record.checklist) ? 'full' : 'partial';
   };
@@ -346,6 +348,12 @@ export default function ProgressScreen() {
             {selectedView.bodyWeight !== '' && (
               <ThemedText type="small" themeColor="textSecondary">
                 Weigh-in: {selectedView.bodyWeight} lb
+              </ThemedText>
+            )}
+            {selectedView.record?.movedAnyway && (
+              <ThemedText type="small" themeColor="textSecondary">
+                Moved anyway: {MOVED_LABELS[selectedView.record.movedAnyway.kind]}
+                {selectedView.record.movedAnyway.minutes ? `, ${selectedView.record.movedAnyway.minutes} min` : ''}
               </ThemedText>
             )}
             {(() => {

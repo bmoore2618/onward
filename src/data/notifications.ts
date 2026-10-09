@@ -53,19 +53,24 @@ export async function syncNotifications(
     const date = addDays(today, i);
     const day = daysBetween(profile.programStartDate, date) + 1;
 
-    // Morning: today's session (or the week wrap on rest days)
+    // Morning: today's session (or the week wrap on rest days). Never mentions a missed day.
     if (day >= 1 && day <= PROGRAM_LENGTH_DAYS) {
       const session = sessionFor(day);
       const at = dateFromKey(date);
       at.setHours(profile.morningHour, 0, 0, 0);
-      if (at > now) {
+      const isWrap = session.kind === 'rest';
+      const wanted = isWrap ? profile.notifyWeekWrap : profile.notifyMorning;
+      if (at > now && wanted) {
         let title = `Day ${day}: ${session.title}`;
         let body = `${session.length}. Today's session is ready when you are.`;
-        if (session.kind === 'rest') {
+        if (isWrap) {
           const w = weekSummary(date);
           const change = w.weightChange === null ? '' : `, ${w.weightChange > 0 ? '+' : ''}${w.weightChange} lb`;
           title = `Week ${w.week} wrap`;
-          body = `${w.workoutsDone} of ${w.trainingDays} workouts${change}. Rest day today. Monday is a clean start.`;
+          body =
+            w.workoutsDone > 0
+              ? `${w.workoutsDone} of ${w.trainingDays} workouts${change}. Rest day today. Monday is a clean start.`
+              : `Rest day today. Monday is a clean start, no catching up needed.`;
         }
         await Notifications.scheduleNotificationAsync({
           content: { title, body },
@@ -76,7 +81,7 @@ export async function syncNotifications(
 
     // Evening: tomorrow's session
     const tomorrowDay = day + 1;
-    if (tomorrowDay >= 1 && tomorrowDay <= PROGRAM_LENGTH_DAYS) {
+    if (profile.notifyEvening && tomorrowDay >= 1 && tomorrowDay <= PROGRAM_LENGTH_DAYS) {
       const next = sessionFor(tomorrowDay);
       const at = dateFromKey(date);
       at.setHours(profile.eveningHour, 0, 0, 0);

@@ -38,6 +38,10 @@ export type Profile = {
   /** Target body weight in pounds, as typed */
   goalWeight: string;
   notificationsEnabled: boolean;
+  /** Each reminder can be switched off on its own */
+  notifyEvening: boolean;
+  notifyMorning: boolean;
+  notifyWeekWrap: boolean;
   /** Local hour (0–23) of the "tomorrow's workout" reminder */
   eveningHour: number;
   /** Local hour (0–23) of the "today's session is ready" reminder */
@@ -54,6 +58,9 @@ export const DEFAULT_PROFILE: Profile = {
   weighInWeekdays: [1, 4],
   goalWeight: '',
   notificationsEnabled: true,
+  notifyEvening: true,
+  notifyMorning: true,
+  notifyWeekWrap: true,
   eveningHour: 20,
   morningHour: 7,
 };

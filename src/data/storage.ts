@@ -30,7 +30,11 @@ export type DayRecord = {
   reentry?: boolean;
   /** This session ran at the previous phase's prescription after 7+ days away */
   holdPhase?: boolean;
+  /** Did something other than the planned session (a walk, a swim…) */
+  movedAnyway?: { kind: MovedKind; minutes?: number };
 };
+
+export type MovedKind = 'walk' | 'bike' | 'swim' | 'run' | 'other';
 
 export type AppState = {
   profile: Profile;

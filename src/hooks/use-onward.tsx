@@ -32,6 +32,7 @@ import {
   type AppState,
   type Checkin,
   type DayRecord,
+  type MovedKind,
   type StatusKind,
 } from '@/data/storage';
 
@@ -151,6 +152,8 @@ type Onward = {
   phaseRecap: (phaseIndex: number) => { sessionsDone: number; trainingDays: number; liftsUp: number; weightChange: number | null };
   toggleItem: (date: string, id: ChecklistId) => void;
   toggleShort: (date: string) => void;
+  /** Log a light activity in place of the session (null clears it) */
+  setMovedAnyway: (date: string, moved: { kind: MovedKind; minutes?: number } | null) => void;
   completeToday: () => void;
   reopenToday: () => void;
 };
@@ -628,7 +631,7 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           if (rec && dayCounts(sessionFor(n), rec.checklist)) return 'done' as const;
           if (d === today) return 'today' as const;
           if (d > today) return 'future' as const;
-          if (pausedOn(d)) return 'paused' as const;
+          if (pausedOn(d) || rec?.movedAnyway) return 'paused' as const;
           return sessionFor(n).kind === 'rest' ? ('rest' as const) : ('missed' as const);
         });
         const daysCompleted = state.completed.filter((r) => r.day >= 1 && r.day <= PROGRAM_LENGTH_DAYS && dayCounts(sessionFor(r.day), r.checklist)).length;
@@ -748,6 +751,9 @@ export function OnwardProvider({ children }: { children: ReactNode }) {
           }
           return withRecord(prev, date, (r) => ({ ...r, checklist: { ...r.checklist, [id]: !r.checklist[id] } }));
         }),
+
+      setMovedAnyway: (date, moved) =>
+        update((prev) => withRecord(prev, date, (r) => ({ ...r, movedAnyway: moved ?? undefined }))),
 
       toggleShort: (date) =>
         update((prev) => {
