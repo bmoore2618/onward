@@ -1,9 +1,11 @@
+import { openURL } from 'expo-linking';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MAX_FONT_SCALE, ThemedText } from '@/components/themed-text';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { FEEDBACK_EMAIL, feedbackMailto, PRIVACY_URL, versionLabel } from '@/data/app-info';
 import { backupSummary, exportBackup, restoreBackup } from '@/data/backup';
 import type { CardioMode, Equipment, Limitation } from '@/data/profile';
 import { PROGRAM_LENGTH_DAYS } from '@/data/program';
@@ -277,6 +279,40 @@ export default function SettingsScreen() {
           </Row>
         </View>
 
+        <ThemedText style={styles.sectionTitle} accessibilityRole="header">
+          Help
+        </ThemedText>
+        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Pressable
+            onPress={() =>
+              openURL(feedbackMailto()).catch(() =>
+                Alert.alert('No email app', `Send feedback to ${FEEDBACK_EMAIL}, or take a screenshot and use Share Beta Feedback in TestFlight.`)
+              )
+            }
+            accessibilityRole="link"
+            accessibilityLabel="Send feedback"
+            accessibilityHint="Opens an email with your app version filled in"
+            style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}>
+            <View style={styles.rowText}>
+              <ThemedText>Send feedback</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Something broken, confusing or missing? It goes straight to the person building this.
+              </ThemedText>
+            </View>
+            <ThemedText style={{ color: theme.accent }}>›</ThemedText>
+          </Pressable>
+          <Divider />
+          <Pressable onPress={() => openURL(PRIVACY_URL)} accessibilityRole="link" accessibilityLabel="Privacy policy" style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.6 }]}>
+            <View style={styles.rowText}>
+              <ThemedText>Privacy policy</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Everything you log stays on this phone.
+              </ThemedText>
+            </View>
+            <ThemedText style={{ color: theme.accent }}>›</ThemedText>
+          </Pressable>
+        </View>
+
         <Pressable onPress={onward.restartOnboarding} hitSlop={8} accessibilityRole="button" style={styles.footerLink}>
           <ThemedText type="small" style={{ color: theme.accent }}>
             Run setup again
@@ -287,6 +323,9 @@ export default function SettingsScreen() {
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.footer}>
           Onward · Consistency over perfection.
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.version}>
+          Version {versionLabel()}
         </ThemedText>
       </ScrollView>
     </SafeAreaView>
@@ -386,5 +425,7 @@ const styles = StyleSheet.create({
   button: { minHeight: 44, borderRadius: 12, paddingHorizontal: Spacing.three, justifyContent: 'center', alignItems: 'center' },
   buttonOutline: { backgroundColor: 'transparent', borderWidth: 1.5 },
   footer: { textAlign: 'center', marginTop: Spacing.four },
+  version: { textAlign: 'center', marginTop: Spacing.one },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three, minHeight: 64 },
   footerLink: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: Spacing.four },
 });
