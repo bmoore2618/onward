@@ -25,7 +25,7 @@ bmoore2618@gmail.com
 
 ## Privacy Policy URL
 
-https://github.com/bmoore2618/onward/blob/main/docs/privacy.md
+https://raw.githubusercontent.com/bmoore2618/onward/main/docs/privacy.md
 
 ## Marketing URL
 

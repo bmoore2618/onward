@@ -6,7 +6,7 @@ import * as Updates from 'expo-updates';
 export const FEEDBACK_EMAIL = 'bmoore2618@gmail.com';
 
 /** Public privacy policy (docs/privacy.md in the GitHub repo) */
-export const PRIVACY_URL = 'https://github.com/bmoore2618/onward/blob/main/docs/privacy.md';
+export const PRIVACY_URL = 'https://raw.githubusercontent.com/bmoore2618/onward/main/docs/privacy.md';
 
 /**
  * "1.0.0 (3) · update 4f2a9c1e" in a TestFlight build, "1.0.0 · development"
